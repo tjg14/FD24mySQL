@@ -36,4 +36,5 @@ def after_request(response):
 def index():
     """Show portfolio of stocks"""
     # Iterate over user holdings, append current price to each holding dictionary, keep track of total portfolio
+    # TEST
     return print("Hello, world")
