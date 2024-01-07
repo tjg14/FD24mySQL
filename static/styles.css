@@ -8,6 +8,13 @@ nav .navbar-brand
 nav .navbar-brand .green
 {
     color: #2e944b;
+
+}
+
+nav .navbar-brand .group_title
+{
+    color: #2a2c2b;
+    font-style: italic;
 }
 
 .table-right-align {

@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Group Log In
+{% endblock %}
+
+{% block main %}
+    <form action="/group_login" method="post">
+        <div class="mb-3">
+            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="groupname" name="groupname" placeholder="Group Name" type="text">
+        </div>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="password" name="password" placeholder="Password" type="password">
+        </div>
+        <button class="btn btn-primary" type="submit">Enter Group</button>
+    </form>
+{% endblock %}

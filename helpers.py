@@ -39,49 +39,18 @@ def login_required(f):
     return decorated_function
 
 
-def lookup(symbol, include_time=False):
-    """Look up quote for symbol."""
+def group_login_required(f):
+    """
+    Decorate routes to require login to a group.
 
-    # Prepare API request
-    symbol = symbol.upper()
-    end = datetime.datetime.now(pytz.timezone("US/Eastern"))
-    start = end - datetime.timedelta(days=7)
-
-    # Yahoo Finance API
-    url = (
-        f"https://query1.finance.yahoo.com/v7/finance/download/{urllib.parse.quote_plus(symbol)}"
-        f"?period1={int(start.timestamp())}"
-        f"&period2={int(end.timestamp())}"
-        f"&interval=1d&events=history&includeAdjustedClose=true"
-    )
-
-    # Query API
-    try:
-        response = requests.get(url, cookies={"session": str(uuid.uuid4())}, headers={"User-Agent": "python-requests", "Accept": "*/*"})
-        response.raise_for_status()
-
-        # CSV header: Date,Open,High,Low,Close,Adj Close,Volume
-        quotes = list(csv.DictReader(response.content.decode("utf-8").splitlines()))
-        quotes.reverse()
-        price = round(float(quotes[0]["Adj Close"]), 2)
-        request_time = end.strftime("%Y-%m-%d %H:%M:%S %Z")
-
-        # Return data with or without time
-        if include_time:
-            return {
-                "name": symbol,
-                "price": price,
-                "symbol": symbol
-            }, request_time
-        else:
-            return {
-                "name": symbol,
-                "price": price,
-                "symbol": symbol
-            }
-
-    except (requests.RequestException, ValueError, KeyError, IndexError):
-        return None
+    http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("group_id") is None:
+            return redirect("/group")
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def usd(value):

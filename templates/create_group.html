@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Create Group
+{% endblock %}
+
+{% block main %}
+    <form action="/create_group" method="post" id="create_group-form">
+        <div class="mb-3">
+            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="groupname" name="groupname" placeholder="Group Name" type="text">
+        </div>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="password" name="password" placeholder="Password" type="password">
+        </div>
+        <div class="mb-3">
+            <input class="form-control mx-auto w-auto" id="confirmation" name="confirmation" placeholder="Confirm Password" type="password">
+        </div>
+        <button class="btn btn-primary" id = "create_gruop-btn" type="submit">Register</button>
+    </form>
+    <script>
+        let button_item = document.querySelector('button[id="create_group-btn"]');
+        button_item.addEventListener('click', () => {
+            button_item.disabled = true;
+            document.getElementById("create_group-form").submit();
+        });
+    </script>
+{% endblock %}

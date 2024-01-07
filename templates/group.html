@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Log In
+{% endblock %}
+
+{% block main %}
+    <form action="/create_group">
+        <div>
+            <button class="btn btn-primary" name="group_action" value="create_group" type="submit">Create New Group</button>
+        </div>
+    </form>
+    <br></br>
+    <form action="/group_login">
+        <div>
+            <button class="btn btn-primary" name="group_action" value="login_group" type="submit">Existing Group</button>
+        </div>
+    </form>
+{% endblock %}

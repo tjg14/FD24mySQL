@@ -37,7 +37,7 @@ hole->1
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     username TEXT NOT NULL,
-    hash TEXT NOT NULL,
+    hash TEXT NOT NULL
 );
 
 CREATE TABLE groups (
