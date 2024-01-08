@@ -42,8 +42,8 @@ CREATE TABLE users (
 
 CREATE TABLE groups (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    group_name TEXT NOT NULL,
-    hash TEXT NOT NULL,
+    groupname TEXT NOT NULL,
+    hash TEXT NOT NULL
 );
 
 CREATE TABLE group_users (
