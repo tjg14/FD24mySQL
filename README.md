@@ -46,11 +46,11 @@ CREATE TABLE groups (
     hash TEXT NOT NULL
 );
 
-CREATE TABLE group_users (
+CREATE TABLE group_user_associations (
     group_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     FOREIGN KEY (group_id) REFERENCES groups(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE course_tee (
@@ -73,8 +73,8 @@ CREATE TABLE events (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     event_name TEXT NOT NULL,
     group_id INT NOT NULL,
-    date TEXT NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES groups(id),
+    date TEXT,
+    FOREIGN KEY (group_id) REFERENCES groups(id)
 );
 
 CREATE TABLE teams (
@@ -93,7 +93,7 @@ CREATE TABLE players (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     player_name TEXT NOT NULL,
     group_id INTEGER NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES groups(id),
+    FOREIGN KEY (group_id) REFERENCES groups(id)
 );
 
 CREATE TABLE handicaps (
@@ -102,7 +102,7 @@ CREATE TABLE handicaps (
     event_id INTEGER NOT NULL,
     player_hcp NUMERIC NOT NULL,
     FOREIGN KEY (player_id) REFERENCES players(id),
-    FOREIGN KEY (event_id) REFERENCES events(id),
+    FOREIGN KEY (event_id) REFERENCES events(id)
 );
 
 CREATE TABLE rounds (

@@ -40,6 +40,37 @@ def index():
     return render_template("index.html", groupname=groupname)
 
 
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Register user"""
+
+    if request.method == "POST":
+
+        # Ensure all fields not blank
+        if not request.form.get("username") or not request.form.get("password") or not request.form.get("confirmation"):
+            return apology("must provide username and password", 400)
+
+        # Query database for username
+        rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
+
+        # Check if username already exists
+        if len(rows) > 0:
+            return apology("Username already exists", 400)
+
+        # Check if password matches confirmation
+        if request.form.get("password") != request.form.get("confirmation"):
+            return apology("Passwords don't match", 400)
+
+        # Register user into users database
+        db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", request.form.get("username"), 
+            generate_password_hash(request.form.get("password")))
+
+        return redirect("/")
+
+    else:
+        return render_template("register.html")
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     """Log user in"""
@@ -127,15 +158,20 @@ def group_login():
         elif not request.form.get("password"):
             return apology("must provide password", 400)
 
-        # Query database for username
-        rows = db.execute("SELECT * FROM groups WHERE groupname = ?", request.form.get("groupname"))
+        # Query database for groupname
+        rows_groups = db.execute("SELECT * FROM groups WHERE groupname = ?", request.form.get("groupname"))
 
         # Ensure username exists and password is correct
-        if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
+        if len(rows_groups) != 1 or not check_password_hash(rows_groups[0]["hash"], request.form.get("password")):
             return apology("invalid group name and/or password", 400)
 
-        # Remember which user has logged in
-        session["group_id"] = rows[0]["id"]
+        # Remember which user has logged in and enter into associations table if needed
+        session["group_id"] = rows_groups[0]["id"]
+        rows_associations = db.execute("SELECT * FROM group_user_associations WHERE user_id = ? AND group_id = ?", 
+            session["user_id"], session["group_id"])
+        if not len(rows_associations):
+            db.execute("INSERT INTO group_user_associations (group_id, user_id) VALUES(?, ?)", 
+                session["group_id"], session["user_id"])
 
         # Redirect to group homepage
         return redirect("/")
@@ -168,7 +204,8 @@ def create_group():
             return apology("Passwords don't match", 400)
 
         # Register group into gruops database
-        db.execute("INSERT INTO groups (groupname, hash) VALUES (?, ?)", request.form.get("groupname"), generate_password_hash(request.form.get("password")))
+        db.execute("INSERT INTO groups (groupname, hash) VALUES (?, ?)", request.form.get("groupname"), 
+            generate_password_hash(request.form.get("password")))
 
         return redirect("/")
 
@@ -176,48 +213,16 @@ def create_group():
         return render_template("create_group.html")
     
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    """Register user"""
-
-    if request.method == "POST":
-
-        # Ensure all fields not blank
-        if not request.form.get("username") or not request.form.get("password") or not request.form.get("confirmation"):
-            return apology("must provide username and password", 400)
-
-        # Query database for username
-        rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
-
-        # Check if username already exists
-        if len(rows) > 0:
-            return apology("Username already exists", 400)
-
-        # Check if password matches confirmation
-        if request.form.get("password") != request.form.get("confirmation"):
-            return apology("Passwords don't match", 400)
-
-        # Register user into users database
-        db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", request.form.get("username"), generate_password_hash(request.form.get("password")))
-
-        return redirect("/")
-
-    else:
-        return render_template("register.html")
-
-
-@app.route("/buy", methods=["GET", "POST"])
+@app.route("/players")
 @login_required
-def buy():
-    """Buy shares of stock"""
+@group_login_required
+def players():
+    """For now, render list of players, and allow add new player"""
+    groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
+    players = db.execute("SELECT * FROM players WHERE group_id = ?", session["group_id"])
+    for row in range(len(players)):
+        players[row]["latest_hcp"] = db.execute("SELECT player_hcp FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
+            players[row]["id"])
 
-    return apology("TODO")
-
-
-@app.route("/sell", methods=["GET", "POST"])
-@login_required
-def sell():
-    """Sell shares of stock"""
-
-    return apology("TODO")
+    return render_template("players.html", groupname=groupname, players=players)
       
