@@ -26,3 +26,13 @@ nav .navbar-brand .group_title
     margin-left: auto;
     margin-right: auto;
 }
+
+#player_table_top {
+    width: 85%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#player_table {
+    vertical-align: middle;
+}

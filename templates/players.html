@@ -6,27 +6,84 @@
 
 {% block main %}
     <p>On this page i will render data about players, handicap history, etc. and have add player option.</p>
-    <p>To DO - add "add player" button, dynamically allow input and add to player database</p>   
-    <div class="mx-auto">
+    <p>To DO - when click submit, route data via post to players and manage in app route</p>   
+    <div class="mx-auto" id="player_table_top">
         <h2>{{ groupname }} Players</h2>
         <br>
-        <table class="table table-hover table-striped">
+        <table class="table table-hover table-striped" >
             <thead>
                 <tr class="table-primary">
                     <th>Player Name</th>
                     <th>Most Recent Handicap Saved</th>
+                    <th></th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="player_table">
                 {% for player in players %}
                 <tr>
                     <td>{{ player.player_name }}</td>
                     <td>{{ player.latest_hcp }}</td>
+                    <td>
+                        <button class="btn btn-primary edit">Edit</button>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    <div>
+        <button class="btn btn-primary" id = "add_player">Add Player</button>
+    </div>
+    <script>
+        let playerTable = document.getElementById("player_table");
+        let addPlayerButton = document.getElementById("add_player");
 
+        addPlayerButton.addEventListener("click", function() {
+            let newRow = playerTable.insertRow();
+            
+            // Insert an input element into the first cell
+            let newCell = newRow.insertCell(0);
+            let newInput = document.createElement("input");
+            newInput.type = "text";
+            newInput.name = "player_name";
+            newInput.id ="player_name";
+            newInput.placeholder = "Enter player name";
+            newInput.classList.add("form-control");
+            newInput.classList.add("mx-auto");
+            newInput.classList.add("w-auto");
+            newCell.appendChild(newInput);
+
+            // Add text to the second cell
+            let newCell2 = newRow.insertCell(1);
+            newCell2.textContent= "n/a"
+
+            // Add Enter button to third cell
+            let newCell3 = newRow.insertCell(2);
+            let newInput3 = document.createElement("button");
+            newInput3.id = "submit_button";
+            newInput3.classList.add("btn");
+            newInput3.classList.add("btn-primary");
+            newInput3.textContent = "Submit";
+            newCell3.appendChild(newInput3);
+
+            // Hide the edit buttons in the table
+            let editButtons = document.querySelectorAll(".edit");
+            editButtons.forEach(button => {
+                button.style.display = "none";
+            });
+
+            // Hide the add player button
+            addPlayerButton.style.display = "none";
+
+        });
+
+        let submitButton = document.getElementById("submit_button");
+
+        submitButton.addEventListener("click", function() {
+
+            // Send a POST request to the /players route with the player name
+            document.getElementById("player_name").submit()
+        });
+    </script>
 
 {% endblock %}
