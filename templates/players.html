@@ -43,6 +43,12 @@
             
             // Insert an input element into the first cell
             let newCell = newRow.insertCell(0);
+            let newForm = document.createElement("form");
+            newForm.action = "/players";
+            newForm.method = "post";
+            newForm.id = "player_name_form";
+            newCell.appendChild(newForm);
+
             let newInput = document.createElement("input");
             newInput.type = "text";
             newInput.name = "player_name";
@@ -51,7 +57,7 @@
             newInput.classList.add("form-control");
             newInput.classList.add("mx-auto");
             newInput.classList.add("w-auto");
-            newCell.appendChild(newInput);
+            document.getElementById("player_name_form").appendChild(newInput);
 
             // Add text to the second cell
             let newCell2 = newRow.insertCell(1);
@@ -75,15 +81,16 @@
             // Hide the add player button
             addPlayerButton.style.display = "none";
 
+            let submitButton = document.getElementById("submit_button");
+       
+            submitButton.addEventListener("click", function() {
+            let form = document.getElementById("player_name_form");
+            form.submit();
+            });
+
         });
 
-        let submitButton = document.getElementById("submit_button");
-
-        submitButton.addEventListener("click", function() {
-
-            // Send a POST request to the /players route with the player name
-            document.getElementById("player_name").submit()
-        });
+        
     </script>
 
 {% endblock %}

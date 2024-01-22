@@ -213,16 +213,34 @@ def create_group():
         return render_template("create_group.html")
     
 
-@app.route("/players")
+@app.route("/players", methods=["GET", "POST"])
 @login_required
 @group_login_required
 def players():
     """For now, render list of players, and allow add new player"""
-    groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
-    players = db.execute("SELECT * FROM players WHERE group_id = ?", session["group_id"])
-    for row in range(len(players)):
-        players[row]["latest_hcp"] = db.execute("SELECT player_hcp FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
-            players[row]["id"])
+    
+    if request.method == "POST":
 
-    return render_template("players.html", groupname=groupname, players=players)
+        #Ensure player name is not blank
+        player_name = request.form.get("player_name")
+        if not player_name:
+            return apology("must input player name", 400)
+
+        #Ensure player name doesn't exist within gurrent group
+        player_rows = db.execute("SELECT * FROM players WHERE group_id = ? AND player_name =?", session["group_id"], player_name)
+        if len(player_rows):
+            return apology("player name already in group", 400)
+
+        #Insert player name into players table
+        db.execute("INSERT INTO players (player_name, group_id) VALUES (?, ?)", player_name, session["group_id"])
+        return redirect("/players")
+    
+    else:
+        groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
+        players = db.execute("SELECT * FROM players WHERE group_id = ?", session["group_id"])
+        for row in range(len(players)):
+            players[row]["latest_hcp"] = db.execute("SELECT player_hcp FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
+                players[row]["id"])
+
+        return render_template("players.html", groupname=groupname, players=players)
       
