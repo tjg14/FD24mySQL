@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Edit or Delete Player
+{% endblock %}
+
+{% block main %}
+    
+    {% if edit_or_delete == "edit"%}
+        <div>
+            <h2>Edit Player Name</h2>
+            <p>Current Name: {{ player_name }}</p>
+            <form  action="/edit_delete_player_complete" method="post">
+                <input name="new_player_name" type="text" placeholder="New Player Name">
+                <input name="edit_or_delete" type="hidden" value="edit">
+                <button class="btn btn-primary" type="submit">Change Name</button>
+            </form>
+        </div>
+    {% else %}
+        <div>
+            <h2>Delete Player</h2>
+            <p>Current Name: {{ player_name }}</p>
+            <p>Are you sure you want to delete this player?</p>
+            <form action="/edit_delete_player_complete" method="post">
+                <input name="player_name_delete" type="hidden" value="{{ player_name }}">
+                <input name="edit_or_delete" type="hidden" value="delete">
+                <button class="btn btn-primary" type="submit">Delete Player</button>
+            </form>
+        </div>
+    {% endif %}
+
+{% endblock %}

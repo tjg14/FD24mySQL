@@ -243,4 +243,54 @@ def players():
                 players[row]["id"])
 
         return render_template("players.html", groupname=groupname, players=players)
+    
+
+@app.route("/edit_delete_player", methods=["GET", "POST"])
+@login_required
+@group_login_required
+def edit_delete_player():
+    """Edit or Delete Player"""
+    
+    if request.method == "POST":
+
+        #Ensure player name or edit / delete is not blank
+        player_name = request.form.get("player_name")
+        edit_or_delete = request.form.get("edit_or_delete")
+        if not player_name or not edit_or_delete:
+            return apology("error player name or edit/delete option didnt go through", 400)
+
+        #If delete, first check retrieve if player has scores
+        player_id = db.execute("SELECT * FROM players WHERE group_id = ? AND player_name =?", session["group_id"], player_name)[0]["id"]
+        player_scores = db.execute("SELECT * FROM scores WHERE player_id = ?", player_id)
+        if len(player_scores):
+            return apology("can't delete player with score history", 400)
+
+ 
+        return render_template("edit_delete_player.html",player_name=player_name, edit_or_delete=edit_or_delete)
+    
+    else:
+        return redirect("/players")
+    
+@app.route("/edit_delete_player_complete", methods=["POST"])
+@login_required
+@group_login_required
+def edit_delete_player_complete():
+    """Complete the Edit or Delete Player"""
+    
+    if request.method == "POST":
+
+       # Check if edit or delete request
+       edit_or_delete = request.form.get("edit_or_delete")
+
+       if edit_or_delete == "edit":
+           new_player_name = request.form.get("new_player_name")
+           return apology("i plan to change players name")
+       elif edit_or_delete == "delete":
+           player_name = request.form.get("player_name")
+           #Check again no scores
+           return apology("i will delete this player")
+       
+    else:
+        return redirect("/players")
+        
       

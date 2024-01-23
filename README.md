@@ -117,6 +117,7 @@ CREATE TABLE matches (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     match_number INTEGER NOT NULL,
     match_name TEXT,
+    match_starting_hole INTERGER NOT NULL DEFAULT 1;
     round_id INTEGER NOT NULL,
     course_id INTEGER NOT NULL,
     team_a_id INTEGER NOT NULL,
@@ -129,11 +130,11 @@ CREATE TABLE matches (
 
 CREATE TABLE scores (
     match_id INTEGER NOT NULL,
-    hole_id INTEGER NOT NULL,
+    match_hole_number INTEGER NOT NULL,
     player_id INTEGER NOT NULL,
     score INTEGER NOT NULL,
+    ESC_score INTEGER,
     FOREIGN KEY (match_id) REFERENCES matches(id),
-    FOREIGN KEY (player_id) REFERENCES players(id),
-    FOREIGN KEY (hole_id) REFERENCES holes(id),
+    FOREIGN KEY (player_id) REFERENCES players(id)
 );
 

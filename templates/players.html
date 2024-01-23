@@ -16,6 +16,7 @@
                     <th>Player Name</th>
                     <th>Most Recent Handicap Saved</th>
                     <th></th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody id="player_table">
@@ -24,7 +25,22 @@
                     <td>{{ player.player_name }}</td>
                     <td>{{ player.latest_hcp }}</td>
                     <td>
-                        <button class="btn btn-primary edit">Edit</button>
+                        <span>
+                            <form action="/edit_delete_player" method="post">
+                                <input name="player_name" value="{{ player.player_name }}" type="hidden">
+                                <input name="edit_or_delete" value="edit" type="hidden">
+                                <button class="btn btn-primary edit" type="submit">Edit</button>
+                            </form>
+                        </span>
+                    </td>
+                    <td>
+                        <span>
+                            <form action="/edit_delete_player" method="post">
+                                <input name="player_name" value="{{ player.player_name }}" type="hidden">
+                                <input name="edit_or_delete" value="delete" type="hidden">
+                                <button class="btn btn-primary delete" type="submit">Delete</button>
+                            </form>
+                        </span>
                     </td>
                 </tr>
                 {% endfor %}
@@ -72,17 +88,21 @@
             newInput3.textContent = "Submit";
             newCell3.appendChild(newInput3);
 
-            // Hide the edit buttons in the table
+            // Hide the edit & delete buttons in the table
             let editButtons = document.querySelectorAll(".edit");
             editButtons.forEach(button => {
+                button.style.display = "none";
+            });
+            let deleteButtons = document.querySelectorAll(".delete");
+            deleteButtons.forEach(button => {
                 button.style.display = "none";
             });
 
             // Hide the add player button
             addPlayerButton.style.display = "none";
 
+            // Submit the player name form
             let submitButton = document.getElementById("submit_button");
-       
             submitButton.addEventListener("click", function() {
             let form = document.getElementById("player_name_form");
             form.submit();
