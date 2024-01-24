@@ -279,18 +279,37 @@ def edit_delete_player_complete():
     
     if request.method == "POST":
 
-       # Check if edit or delete request
-       edit_or_delete = request.form.get("edit_or_delete")
-
-       if edit_or_delete == "edit":
-           new_player_name = request.form.get("new_player_name")
-           return apology("i plan to change players name")
-       elif edit_or_delete == "delete":
-           player_name = request.form.get("player_name")
-           #Check again no scores
-           return apology("i will delete this player")
+        # Check if edit or delete request
+        edit_or_delete = request.form.get("edit_or_delete")
+        player_name = request.form.get("player_name")
        
+        if edit_or_delete == "edit":
+            new_player_name = request.form.get("new_player_name")
+            db.execute("UPDATE players SET player_name = ? WHERE player_name = ? AND group_id = ?",
+                new_player_name, player_name, session["group_id"])
+        elif edit_or_delete == "delete":
+            #Check again no scores
+            player_id = db.execute("SELECT * FROM players WHERE group_id = ? AND player_name =?", session["group_id"], player_name)[0]["id"]
+            player_scores = db.execute("SELECT * FROM scores WHERE player_id = ?", player_id)
+            if len(player_scores):
+                return apology("can't delete player with score history", 400)
+            
+            #Delete from players database
+            db.execute("DELETE FROM players WHERE id = ?", player_id)
+        else:
+            return apology("no edit or delete request")
+       
+        return redirect("/players")
     else:
         return redirect("/players")
-        
+
+
+@app.route("/create_event", methods=["GET", "POST"])
+@login_required
+@group_login_required
+def create_event():
+    """Create Event"""
+    
+    return render_template("create_event.html")
+
       

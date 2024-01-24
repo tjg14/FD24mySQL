@@ -36,3 +36,7 @@ nav .navbar-brand .group_title
 #player_table {
     vertical-align: middle;
 }
+
+.my-footer {
+    bottom: 0;
+}

@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Create Event
+{% endblock %}
+
+{% block main %}
+Plan: dynamically build table to input team names -> "next step" button takes you to next form to add the players via drop downs 
+from all players list in group, select team to associate them with, and also input handicap for the event.
+    <form action="/create_event" method="post" id="create_event-form">
+        <div class="mb-3">
+            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="num_players" placeholder="Number of Players" type="number">
+            <button class="btn btn-primary" id = "create_gruop-btn">Update</button>
+        </div>
+        <p></p>
+        <div>
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Team Names</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <button class="btn btn-primary" id = "create_gruop-btn" type="submit">Create Event</button>
+    </form>
+    <script>
+
+    </script>
+{% endblock %}
+

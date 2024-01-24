@@ -5,8 +5,7 @@
 {% endblock %}
 
 {% block main %}
-    <p>On this page i will render data about players, handicap history, etc. and have add player option.</p>
-    <p>To DO - when click submit, route data via post to players and manage in app route</p>   
+
     <div class="mx-auto" id="player_table_top">
         <h2>{{ groupname }} Players</h2>
         <br>
@@ -14,7 +13,7 @@
             <thead>
                 <tr class="table-primary">
                     <th>Player Name</th>
-                    <th>Most Recent Handicap Saved</th>
+                    <th>Latest Handicap Saved</th>
                     <th></th>
                     <th></th>
                 </tr>
@@ -23,7 +22,12 @@
                 {% for player in players %}
                 <tr>
                     <td>{{ player.player_name }}</td>
-                    <td>{{ player.latest_hcp }}</td>
+                    <td>{% if player.latest_hcp %}
+                            {{ player.latest_hcp }}
+                        {% else %}
+                            No HCP
+                        {% endif %}
+                    </td>
                     <td>
                         <span>
                             <form action="/edit_delete_player" method="post">
