@@ -15,7 +15,6 @@
                     <th>Player Name</th>
                     <th>Latest Handicap Saved</th>
                     <th></th>
-                    <th></th>
                 </tr>
             </thead>
             <tbody id="player_table">
@@ -36,8 +35,7 @@
                                 <button class="btn btn-primary edit" type="submit">Edit</button>
                             </form>
                         </span>
-                    </td>
-                    <td>
+             
                         <span>
                             <form action="/edit_delete_player" method="post">
                                 <input name="player_name" value="{{ player.player_name }}" type="hidden">
@@ -50,9 +48,14 @@
                 {% endfor %}
             </tbody>
         </table>
-    </div>
+        
     <div>
         <button class="btn btn-primary" id = "add_player">Add Player</button>
+    </div>
+    <p></p>
+    <div>
+        Note: Latest handicap will be set via latest created event - otherwise will show No HCP.
+    </div>
     </div>
     <script>
         let playerTable = document.getElementById("player_table");
@@ -78,29 +81,25 @@
             newInput.classList.add("mx-auto");
             newInput.classList.add("w-auto");
             document.getElementById("player_name_form").appendChild(newInput);
+            newInput.focus();
 
-            // Add text to the second cell
+            // Add Enter button to second cell
             let newCell2 = newRow.insertCell(1);
-            newCell2.textContent= "n/a"
+            let newInput2 = document.createElement("button");
+            newInput2.id = "submit_button";
+            newInput2.classList.add("btn");
+            newInput2.classList.add("btn-primary");
+            newInput2.textContent = "Submit";
+            newCell2.appendChild(newInput2);
 
-            // Add Enter button to third cell
-            let newCell3 = newRow.insertCell(2);
-            let newInput3 = document.createElement("button");
-            newInput3.id = "submit_button";
-            newInput3.classList.add("btn");
-            newInput3.classList.add("btn-primary");
-            newInput3.textContent = "Submit";
-            newCell3.appendChild(newInput3);
+            //Delete Edit and Delete columns, not needed
+            var rowCount = playerTable.rows.length;
+            let index = 2;
+            for (var i = 0; i < rowCount; i++) {
+                playerTable.rows[i].deleteCell(index);
+            }
+            
 
-            // Hide the edit & delete buttons in the table
-            let editButtons = document.querySelectorAll(".edit");
-            editButtons.forEach(button => {
-                button.style.display = "none";
-            });
-            let deleteButtons = document.querySelectorAll(".delete");
-            deleteButtons.forEach(button => {
-                button.style.display = "none";
-            });
 
             // Hide the add player button
             addPlayerButton.style.display = "none";
@@ -111,7 +110,6 @@
             let form = document.getElementById("player_name_form");
             form.submit();
             });
-
         });
 
         

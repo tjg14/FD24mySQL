@@ -5,31 +5,108 @@
 {% endblock %}
 
 {% block main %}
-Plan: dynamically build table to input team names -> "next step" button takes you to next form to add the players via drop downs 
+-> "next step" button takes you to next form to add the players via drop downs 
 from all players list in group, select team to associate them with, and also input handicap for the event.
-    <form action="/create_event" method="post" id="create_event-form">
-        <div class="mb-3">
-            <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="num_players" placeholder="Number of Players" type="number">
-            <button class="btn btn-primary" id = "create_gruop-btn">Update</button>
-        </div>
-        <p></p>
-        <div>
-            <table class="table table-hover table-striped">
-                <thead>
-                    <tr>
-                        <th>Team Names</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <button class="btn btn-primary" id = "create_gruop-btn" type="submit">Create Event</button>
-    </form>
+<p></p>
+    <div>
+        <form action="/create_event" method="post" id="create_event-form">
+            <div class="mb-3">
+                <span><b>Event Name</b></span>
+                <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="event_name" placeholder="Event Name" type="text">
+                <p></p>
+                <span><b>Number of Players</b></span>
+                <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="num_players" placeholder="Number of Players" type="number">
+                <p></p>
+            </div>
+            <p></p>
+            <div>
+                <table class="table table-hover table-striped" style="display: none">
+                    <thead>
+                        <tr>
+                            <th>Team Names</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <p></p>
+            <button class="btn btn-primary" id = "create_gruop-btn" type="submit" name="create_event" style="display:none">Create Event</button>
+        </form>
+    </div>
     <script>
+        // get the input element for number of players
+        var num_players = document.querySelector("input[name='num_players']");
+
+        // get the table element for team names
+        var team_table = document.querySelector("table");
+
+        // get the button element for creating event
+        var create_event = document.querySelector("button[name='create_event']");
+
+        // add an event listener for the input element
+        num_players.addEventListener("input", function() {
+            // get the value of the input as a number
+            var n = parseInt(num_players.value);
+
+            // check if the value is a valid positive integer
+            if (n > 0 && Number.isInteger(n)) {
+                // unhide the table element
+                team_table.style.display = "table";
+
+                // unhide the button element
+                create_event.style.display = "inline-block";
+
+                // get the number of rows needed for the table
+                var rows = Math.ceil(n / 2);
+
+                // get the current number of rows in the table
+                var current_rows = team_table.rows.length - 1;
+
+                // if the current number of rows is less than the needed number, add more rows
+                if (current_rows < rows) {
+                    for (var i = current_rows; i < rows; i++) {
+                    // create a new row element
+                    var row = document.createElement("tr");
+
+                    // create a new cell element
+                    var cell = document.createElement("td");
+
+                    // create a new input element for team name
+                    var input = document.createElement("input");
+                    input.type = "text";
+                    input.name = "team_name_" + (i + 1);
+                    input.placeholder = "Team " + (i + 1); 
+                    input.classList.add("form-control");
+                    input.classList.add("mx-auto");
+                    input.classList.add("w-auto");
+
+                    // append the input element to the cell element
+                    cell.appendChild(input);
+
+                    // append the cell element to the row element
+                    row.appendChild(cell);
+
+                    // append the row element to the table body element
+                    team_table.tBodies[0].appendChild(row);
+                    }
+                }
+
+                // if the current number of rows is more than the needed number, remove extra rows
+                if (current_rows > rows) {
+                    for (var i = current_rows; i > rows; i--) {
+                    // remove the last row element from the table body element
+                    team_table.tBodies[0].removeChild(team_table.tBodies[0].lastChild);
+                    }
+                }
+            } else {
+                // hide the table element
+                team_table.style.display = "none";
+
+                // hide the button element
+                create_event.style.display = "none";
+            }
+            });
 
     </script>
 {% endblock %}

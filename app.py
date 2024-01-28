@@ -118,7 +118,7 @@ def logout():
     return redirect("/")
 
 
-@app.route("/group",  methods=["GET", "POST"])
+@app.route("/group")
 @login_required
 def group():
     """Show options to join group or create group"""
@@ -127,15 +127,7 @@ def group():
     if session.get("group_id") is not None:
         session.pop("group_id", None)
 
-    if request.method == "POST":
-        if request.form.get("group_action") == "create_group":
-            return redirect("/create_group")
-        elif request.form.get("group_action") == "login_group":
-            return redirect("/group_login")
-        else:
-            return apology("Posted without valid group action")   
-    else:
-        return render_template("group.html")
+    return render_template("group.html")
 
 
 @app.route("/group_login",  methods=["GET", "POST"])
@@ -309,7 +301,10 @@ def edit_delete_player_complete():
 @group_login_required
 def create_event():
     """Create Event"""
-    
-    return render_template("create_event.html")
+
+    if request.method == "POST":
+        return apology("to do post create event")
+    else:
+        return render_template("create_event.html")
 
       

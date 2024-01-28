@@ -1,7 +1,8 @@
 /* Size for page Name */
 nav .navbar-brand
 {
-    font-size: xx-large;
+    font-size: 2em;
+    font-family: Brush Script MT, Arial, Helvetica, sans-serif;
 }
 
 /* Colors for Nav Bar */
@@ -28,7 +29,7 @@ nav .navbar-brand .group_title
 }
 
 #player_table_top {
-    width: 85%;
+    width: 90%;
     margin-left: auto;
     margin-right: auto;
 }
@@ -37,6 +38,18 @@ nav .navbar-brand .group_title
     vertical-align: middle;
 }
 
-.my-footer {
-    bottom: 0;
+td span {
+    display: inline-block;
+    margin-right: 5px;
+}
+
+@media (max-width: 500px) {
+    td span {
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    input #player_name {
+        width: 95%;
+    }
 }
