@@ -1,4 +1,4 @@
-import os
+import os, math
 
 from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session
@@ -234,7 +234,7 @@ def players():
             players[row]["latest_hcp"] = db.execute("SELECT player_hcp FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
                 players[row]["id"])
 
-        return render_template("players.html", groupname=groupname, players=players)
+        return render_template("players.html", groupname=groupname, players=players, num_players=len(players))
     
 
 @app.route("/edit_delete_player", methods=["GET", "POST"])
@@ -301,10 +301,26 @@ def edit_delete_player_complete():
 @group_login_required
 def create_event():
     """Create Event"""
-
+    
     if request.method == "POST":
-        return apology("to do post create event")
+        event_name = request.form.get("event_name")
+        try:
+            num_players = int(request.form.get("num_players"))
+        except ValueError:
+            return apology("Num Team must be integer")
+       
+       #Send back if pressed enter with 0 players or no event name
+        if not num_players or not event_name:
+            redirect("/create_event")
+        
+        #TODO confim event name doesnt exist in the group already
+        
+        num_teams = math.ceil(num_players / 2)
+        team_names = []
+        for i in range(num_teams):
+            team_names.append(request.form.get("team_name_" + str(i + 1)))
+
+        return render_template("create_event_continued.html", event_name=event_name, 
+            num_players=num_players, num_teams=num_teams, team_names=team_names)
     else:
         return render_template("create_event.html")
-
-      

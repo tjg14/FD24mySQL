@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Finalize Event Details
+{% endblock %}
+
+{% block main %}
+ import team names, put into table with player 1 and 2 options verticl one column; add the players to teams via drop downs 
+from all players list in group,  and also input handicap for the event.
+<p></p>
+    <div>
+        <p>Event Name: {{ event_name }}</p>
+        
+        <p> Number of Players: {{ num_players }}</p>
+
+        <p>Number of Teams: {{ num_teams }}</p>
+        <p>
+            {% for team in team_names %}
+                {{ team }}
+            {% endfor %}
+        </p>
+    </div>
+    <script>
+   
+
+    </script>
+{% endblock %}
+

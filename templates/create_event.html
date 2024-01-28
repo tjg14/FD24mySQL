@@ -9,17 +9,17 @@
 from all players list in group, select team to associate them with, and also input handicap for the event.
 <p></p>
     <div>
-        <form action="/create_event" method="post" id="create_event-form">
+        <form action="/create_event" method="post" id="create_event_form">
             <div class="mb-3">
                 <span><b>Event Name</b></span>
                 <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="event_name" placeholder="Event Name" type="text">
                 <p></p>
                 <span><b>Number of Players</b></span>
-                <input autocomplete="off" autofocus class="form-control mx-auto w-auto" name="num_players" placeholder="Number of Players" type="number">
+                <input autocomplete="off" class="form-control mx-auto w-auto" name="num_players" placeholder="Number of Players" type="number">
                 <p></p>
             </div>
             <p></p>
-            <div>
+            <div id="event_team_table">
                 <table class="table table-hover table-striped" style="display: none">
                     <thead>
                         <tr>
@@ -31,7 +31,7 @@ from all players list in group, select team to associate them with, and also inp
                 </table>
             </div>
             <p></p>
-            <button class="btn btn-primary" id = "create_gruop-btn" type="submit" name="create_event" style="display:none">Create Event</button>
+            <button class="btn btn-primary" id = "create_group_btn" type="submit" name="create_event" style="display:none">Create Event</button>
         </form>
     </div>
     <script>
@@ -106,6 +106,13 @@ from all players list in group, select team to associate them with, and also inp
                 // hide the button element
                 create_event.style.display = "none";
             }
+            });
+            
+         // Submit the event form via post when user clicks Create Group
+         let createGroupButton = document.getElementById("create_group_btn");
+            createGroupButton.addEventListener("click", function() {
+            let form = document.getElementById("create_event_form");
+            form.submit();
             });
 
     </script>
