@@ -304,6 +304,7 @@ def create_event():
     
     if request.method == "POST":
         event_name = request.form.get("event_name")
+        event_date = request.form.get("event_date")
         try:
             num_players = int(request.form.get("num_players"))
         except ValueError:
@@ -322,7 +323,26 @@ def create_event():
         
         group_players = db.execute("SELECT player_name FROM players WHERE group_id = ?", session["group_id"])
 
-        return render_template("create_event_continued.html", event_name=event_name, 
+        return render_template("create_event_continued.html", event_name=event_name, event_date=event_date,
             num_players=num_players, num_teams=num_teams, team_names=team_names, group_players=group_players)
     else:
         return render_template("create_event.html")
+
+@app.route("/create_event_continued", methods=["GET", "POST"])
+@login_required
+@group_login_required
+def create_event_continued():
+    """Create Event"""
+    
+    if request.method == "POST":
+            
+            #Need, for each team, player a and player b, and their handicaps
+            #insert into events, event, group, date
+            #insert into teams, teams, event
+            #insert into team_roster, players on each team
+            #insert into handicaps table, event, player, and handicap
+
+      
+            return apology("to do book event and team details")
+    else:
+        redirect("/create_event")

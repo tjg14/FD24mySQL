@@ -9,53 +9,77 @@
 from all players list in group,  and also input handicap for the event.
 <p></p>
     <div>
-        <p><b>Event Name:</b> {{ event_name }}</p>
-        
-        <p> <b>Number of Players:</b> {{ num_players }}</p>
+        <form>
+            <p><b>Event Name:</b> {{ event_name }}</p>
+            <input type="hidden" name="event_name" value="{{ event_name }}">
 
-        <p><b>Number of Teams:</b> {{ num_teams }}</p>
+            {% if event_date %}
+                <p><b>Event Date:</b> {{ event_date }}</p>
+                <input type="hidden" name="event_date" value="{{ event_date }}">
+            {% endif %}
+            
+            <p> <b>Number of Players:</b> {{ num_players }}</p>
+            <input type="hidden" name="num_players" value="{{ num_players }}">
 
-        <p>
-            {% for player in group_players %} 
-                {{ player.player_name }}
-            {% endfor %}
+            <p><b>Number of Teams:</b> {{ num_teams }}</p>
+            <input type="hidden" name="num_teams" value="{{ num_teams }}">
 
-        </p>
+            <p>
+                {% for player in group_players %} 
+                    {{ player.player_name }}
+                {% endfor %}
 
-        <p>
-            <table class="table table-hover table-striped">
-                <thead>
-                    <tr>
-                        <th>Team Rosters</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for team in team_names %}
+            </p>
+
+            Note: Enter "plus" handicaps (better than scratch) as negative (-)
+
+            <p>
+                <table class="table table-hover table-striped">
+                    <thead>
                         <tr>
-                            <td>{{ team }}</td>
+                            <th>Team Rosters</th>
                         </tr>
-                        <tr>
-                            <td>
-                                <span>
-                                    <div class="form-group">
-                                        <select class="form-control" name="player_a_team_" + {{ team }}>
-                                            <option selected disabled>Player A</option>
-                                            {% for player in group_players %} 
-                                                <option value="{{ player.player_name }}">{{ player.player_name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                      </div>
-                                </span>
-                                <span>hcp box</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td><span>input b option </span><span>hcp input</span> </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </p>
+                    </thead>
+                    <tbody>
+                        {% for team in team_names %}
+                            <tr>
+                                <td><b>{{ team }}  - Players</b></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span>
+                                        <div>
+                                            <select class="form-control" name="player_a_team_" + {{ team }}>
+                                                <option selected disabled>Player A</option>
+                                                {% for player in group_players %} 
+                                                    <option value="{{ player.player_name }}">{{ player.player_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </span>
+                                    <span><input class="form-control mx-auto w-auto" name="hcp_player_a_team_" + {{ team }} type="number" step="0.1" placeholder="HCP"></span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span>
+                                        <div>
+                                            <select class="form-control" name="player_b_team_" + {{ team }}>
+                                                <option selected disabled>Player B</option>
+                                                {% for player in group_players %} 
+                                                    <option value="{{ player.player_name }}">{{ player.player_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </span>
+                                    <span><input class="form-control mx-auto w-auto" name="hcp_player_b_team_" + {{ team }} type="number" step="0.1" placeholder="HCP"></span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </p>
+        </form>
     </div>
     <script>
    
