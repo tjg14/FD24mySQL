@@ -9,15 +9,52 @@
 from all players list in group,  and also input handicap for the event.
 <p></p>
     <div>
-        <p>Event Name: {{ event_name }}</p>
+        <p><b>Event Name:</b> {{ event_name }}</p>
         
-        <p> Number of Players: {{ num_players }}</p>
+        <p> <b>Number of Players:</b> {{ num_players }}</p>
 
-        <p>Number of Teams: {{ num_teams }}</p>
+        <p><b>Number of Teams:</b> {{ num_teams }}</p>
+
         <p>
-            {% for team in team_names %}
-                {{ team }}
+            {% for player in group_players %} 
+                {{ player.player_name }}
             {% endfor %}
+
+        </p>
+
+        <p>
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Team Rosters</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for team in team_names %}
+                        <tr>
+                            <td>{{ team }}</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span>
+                                    <div class="form-group">
+                                        <select class="form-control" name="player_a_team_" + {{ team }}>
+                                            <option selected disabled>Player A</option>
+                                            {% for player in group_players %} 
+                                                <option value="{{ player.player_name }}">{{ player.player_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                      </div>
+                                </span>
+                                <span>hcp box</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><span>input b option </span><span>hcp input</span> </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </p>
     </div>
     <script>

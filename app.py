@@ -319,8 +319,10 @@ def create_event():
         team_names = []
         for i in range(num_teams):
             team_names.append(request.form.get("team_name_" + str(i + 1)))
+        
+        group_players = db.execute("SELECT player_name FROM players WHERE group_id = ?", session["group_id"])
 
         return render_template("create_event_continued.html", event_name=event_name, 
-            num_players=num_players, num_teams=num_teams, team_names=team_names)
+            num_players=num_players, num_teams=num_teams, team_names=team_names, group_players=group_players)
     else:
         return render_template("create_event.html")

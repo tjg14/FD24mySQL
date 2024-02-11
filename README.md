@@ -59,6 +59,7 @@ CREATE TABLE course_tee (
     teebox TEXT NOt NULL,
     rating NUMERIC NOT NULL,
     slope NUMERIC NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE holes (
@@ -66,7 +67,7 @@ CREATE TABLE holes (
     hole_number INTEGER NOT NULL,
     par INTEGER NOT NULL,
     hole_hcp INTEGER NOT NULL,
-    FOREIGN KEY (course_id) REFERENCES course_tee(id),
+    FOREIGN KEY (course_id) REFERENCES course_tee(id)
 );
 
 CREATE TABLE events (
@@ -81,12 +82,12 @@ CREATE TABLE teams (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     team_name TEXT NOT NULL,
     event_id INTEGER NOT NULL,
-    FOREIGN KEY (event_id) REFERENCES events(id),
+    FOREIGN KEY (event_id) REFERENCES events(id)
 );
 
 CREATE TABLE team_roster (
     team_id INTEGER NOT NULL,
-    player_id INTEGER NOT NULL,
+    player_id INTEGER NOT NULL
 );
 
 CREATE TABLE players (
@@ -106,18 +107,18 @@ CREATE TABLE handicaps (
 );
 
 CREATE TABLE rounds (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL;
-    round_number INTEGER NOT NULL;
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    round_number INTEGER NOT NULL,
     round_name TEXT,
-    event_id INTEGER NOT NULL;
-    FOREIGN KEY (event_id) REFERENCES events(id),
+    event_id INTEGER NOT NULL,
+    FOREIGN KEY (event_id) REFERENCES events(id)
 );
 
 CREATE TABLE matches (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     match_number INTEGER NOT NULL,
     match_name TEXT,
-    match_starting_hole INTERGER NOT NULL DEFAULT 1;
+    match_starting_hole INTERGER NOT NULL DEFAULT 1,
     round_id INTEGER NOT NULL,
     course_id INTEGER NOT NULL,
     team_a_id INTEGER NOT NULL,
@@ -126,7 +127,8 @@ CREATE TABLE matches (
     FOREIGN KEY (round_id) REFERENCES rounds(id),
     FOREIGN KEY (course_id) REFERENCES courses(id),
     FOREIGN KEY (team_a_id) REFERENCES teams(id),
-    FOREIGN KEY (team_b_id) REFERENCES teams(id),
+    FOREIGN KEY (team_b_id) REFERENCES teams(id)
+);
 
 CREATE TABLE scores (
     match_id INTEGER NOT NULL,
