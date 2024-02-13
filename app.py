@@ -42,7 +42,7 @@ def index():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    """Register user"""
+    """Register new user"""
 
     if request.method == "POST":
 
@@ -50,21 +50,22 @@ def register():
         if not request.form.get("username") or not request.form.get("password") or not request.form.get("confirmation"):
             return apology("must provide username and password", 400)
 
-        # Query database for username
+        # Query users table in database for username
         rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
 
-        # Check if username already exists
+        # Check if username already exists in users table, if yes, return apology
         if len(rows) > 0:
             return apology("Username already exists", 400)
 
-        # Check if password matches confirmation
+        # Check if password matches confirmation, else return apology
         if request.form.get("password") != request.form.get("confirmation"):
             return apology("Passwords don't match", 400)
 
-        # Register user into users database
+        # Register new user into users database along with hash of their password
         db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", request.form.get("username"), 
             generate_password_hash(request.form.get("password")))
 
+        # Redirect user to home page
         return redirect("/")
 
     else:
@@ -75,35 +76,36 @@ def register():
 def login():
     """Log user in"""
 
-    # Forget any user_id
+    # Forget any user_id in session
     session.clear()
 
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
 
-        # Ensure username was submitted
+        # Ensure username was submitted, else return apology
         if not request.form.get("username"):
             return apology("must provide username", 400)
 
-        # Ensure password was submitted
+        # Ensure password was submitted, else return apology
         elif not request.form.get("password"):
             return apology("must provide password", 400)
 
-        # Query database for username
+        # Query users table in database for username
         rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
 
-        # Ensure username exists and password is correct
+        # Ensure username exists and password is correct, else return apology
         if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
             return apology("invalid username and/or password", 400)
 
-        # Remember which user has logged in
+        # Remember which user has logged in by storing user_id in session
         session["user_id"] = rows[0]["id"]
 
-        # Redirect user to group options
+        # Redirect user to group route, in order to choose or create a group
         return redirect("/group")
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
+        # Render login.html showing login form
         return render_template("login.html")
 
 
@@ -111,7 +113,7 @@ def login():
 def logout():
     """Log user out"""
 
-    # Forget any user_id
+    # Forget any user_id in session
     session.clear()
 
     # Redirect user to login form
@@ -123,10 +125,11 @@ def logout():
 def group():
     """Show options to join group or create group"""
 
-    # Forget any group_id
+    # Forget any group_id in session
     if session.get("group_id") is not None:
         session.pop("group_id", None)
 
+    # Render group.html showing options to join group or create group
     return render_template("group.html")
 
 
@@ -332,12 +335,16 @@ def create_event():
 @login_required
 @group_login_required
 def create_event_continued():
-    """Create Event"""
+    """Create Event - Team Details"""
     
     if request.method == "POST":
             
-            #Need, for each team, player a and player b, and their handicaps
-            #insert into events, event, group, date
+          
+            #insert into events table the event, group, and date from form in create_event
+            #insert into teams table all the team names, and event_id
+
+            
+            
             #insert into teams, teams, event
             #insert into team_roster, players on each team
             #insert into handicaps table, event, player, and handicap
@@ -346,3 +353,6 @@ def create_event_continued():
             return apology("to do book event and team details")
     else:
         redirect("/create_event")
+
+
+
