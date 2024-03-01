@@ -14,9 +14,9 @@ from all players list in group,  and also input handicap for the event.
             <input type="hidden" name="event_name" value="{{ event_name }}">
 
             {% if event_date %}
-                <p><b>Event Date:</b> {{ event_date }}</p>
-                <input type="hidden" name="event_date" value="{{ event_date }}">
+                <p><b>Event Date:</b> {{ event_date }}</p>  
             {% endif %}
+            <input type="hidden" name="event_date" value="{{ event_date }}">
             
             <p> <b>Number of Players:</b> {{ num_players }}</p>
             <input type="hidden" name="num_players" value="{{ num_players }}">
@@ -44,12 +44,13 @@ from all players list in group,  and also input handicap for the event.
                         {% for team in team_names %}
                             <tr>
                                 <td><b>{{ team }}  - Players</b></td>
+                                <input type="hidden" name="team_name_{{ loop.index0 }}" value="{{ team }}">
                             </tr>
                             <tr>
                                 <td>
                                     <span>
                                         <div>
-                                            <select class="form-control" name="player_a_team_" + {{ team }}>
+                                            <select class="form-control" name="player_a_team_{{ loop.index0 }}">
                                                 <option selected disabled>Player A</option>
                                                 {% for player in group_players %} 
                                                     <option value="{{ player.player_name }}">{{ player.player_name }}</option>
@@ -57,14 +58,14 @@ from all players list in group,  and also input handicap for the event.
                                             </select>
                                         </div>
                                     </span>
-                                    <span><input class="form-control mx-auto w-auto" name="hcp_player_a_team_" + {{ team }} type="number" step="0.1" placeholder="HCP"></span>
+                                    <span><input class="form-control mx-auto w-auto" name="hcp_player_a_team_{{ loop.index0 }}" type="number" step="0.1" placeholder="HCP"></span>
                                 </td>
                             </tr>
                             <tr>
                                 <td>
                                     <span>
                                         <div>
-                                            <select class="form-control" name="player_b_team_" + {{ team }}>
+                                            <select class="form-control" name="player_b_team_{{ loop.index0 }}">
                                                 <option selected disabled>Player B</option>
                                                 {% for player in group_players %} 
                                                     <option value="{{ player.player_name }}">{{ player.player_name }}</option>
@@ -72,7 +73,7 @@ from all players list in group,  and also input handicap for the event.
                                             </select>
                                         </div>
                                     </span>
-                                    <span><input class="form-control mx-auto w-auto" name="hcp_player_b_team_" + {{ team }} type="number" step="0.1" placeholder="HCP"></span>
+                                    <span><input class="form-control mx-auto w-auto" name="hcp_player_b_team_{{ loop.index0 }}" type="number" step="0.1" placeholder="HCP"></span>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -80,45 +81,47 @@ from all players list in group,  and also input handicap for the event.
                 </table>
             </div>
         </form>
-        <button class="btn btn-primary" id = "create_event" type="submit">Submit Teams</button>
+        <button class="btn btn-primary" id="create_event" type="submit">Submit Teams</button>
     </div>
     <script>
-        /*
-        var create_event = document.querySelector("button[name='create_event']");
+        
+        var create_event = document.querySelector("button[id='create_event']");
         create_event.addEventListener("click", function() {
             var num_teams = parseInt(document.querySelector("input[name='num_teams']").value);
-            var team_names = [];
+       
+            var teams = [];
             for (var i = 0; i < num_teams; i++) {
-                var team_name = document.querySelector("input[name='team_name_" + i + "']").value;
-                team_names.push(team_name);
+                var team = {
+                    "team_name": document.querySelector("input[name='team_name_" + i + "']").value,
+                    "player_a": document.querySelector("select[name='player_a_team_" + i + "']").value,
+                    "hcp_a": document.querySelector("input[name='hcp_player_a_team_" + i + "']").value,
+                    "player_b": document.querySelector("select[name='player_b_team_" + i + "']").value,
+                    "hcp_b": document.querySelector("input[name='hcp_player_b_team_" + i + "']").value
+                };   
+                teams.push(team);
             }
-            var team_players = [];
-            for (var i = 0; i < num_teams; i++) {
-                var player_a = document.querySelector("select[name='player_a_team_" + i + "']").value;
-                var hcp_a = document.querySelector("input[name='hcp_player_a_team_" + i + "']").value;
-                var player_b = document.querySelector("select[name='player_b_team_" + i + "']").value;
-                var hcp_b = document.querySelector("input[name='hcp_player_b_team_" + i + "']").value;
-                team_players.push([player_a, hcp_a, player_b, hcp_b]);
-            }
-            var data = {
+                
+           var data = {
                 "event_name": document.querySelector("input[name='event_name']").value,
                 "event_date": document.querySelector("input[name='event_date']").value,
                 "num_players": document.querySelector("input[name='num_players']").value,
                 "num_teams": document.querySelector("input[name='num_teams']").value,
-                "team_names": team_names,
-                "team_players": team_players
+                "teams": teams
             };
+           
+
             var xhr = new XMLHttpRequest();
-            xhr.open("POST", "/create_event");
+            xhr.open("POST", "/create_event_continued");
             xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
             xhr.send(JSON.stringify(data));
             xhr.onload = function() {
                 if (xhr.status == 200) {
-                    window.location.href = "/event";
+                    window.location.href = xhr.getResponseHeader('Location');
                 }
             };
-        })
-        */
+
+        });
+        
     </script>
 {% endblock %}
 

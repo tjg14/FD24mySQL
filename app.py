@@ -4,8 +4,11 @@ from cs50 import SQL
 from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
+import logging
 
 from helpers import apology, login_required, group_login_required, usd
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Configure application
 app = Flask(__name__)
@@ -337,22 +340,37 @@ def create_event():
 def create_event_continued():
     """Create Event - Team Details"""
     
-    if request.method == "POST":
-            
-          
-            #insert into events table the event, group, and date from form in create_event
-            #insert into teams table all the team names, and event_id
 
-            
-            
-            #insert into teams, teams, event
-            #insert into team_roster, players on each team
-            #insert into handicaps table, event, player, and handicap
+    if request.method == "POST":
+        try:
+            # Your code here
+            data = request.get_json()
+            return redirect("/players")
+        except Exception as e:
+            # Log the exception
+            app.logger.error(f"Error occurred: {e}")
+            # Return a 400 response with the error message
+            return jsonify(error=str(e)), 400
+        
+        # TODO how to manage ajax return functions........ can do without ajax???
+
+        #data = request.get_json()
+        #logging.debug('Received data: %s', data)
+        # rest of your code
+        #insert into events table the event, group, and date from form in create_event
+        #insert into teams table all the team names, and event_id
+
+        
+        
+        #insert into teams, teams, event
+        #insert into team_roster, players on each team
+        #insert into handicaps table, event, player, and handicap
 
       
-            return apology("to do book event and team details")
+        #return apology("to do book event and team details")
     else:
-        redirect("/create_event")
+        return apology("testing")
+        #redirect("/create_event")
 
 
 
