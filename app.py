@@ -342,26 +342,12 @@ def create_event_continued():
     
 
     if request.method == "POST":
-        try:
-            # Your code here
-            data = request.get_json()
-            return redirect("/players")
-        except Exception as e:
-            # Log the exception
-            app.logger.error(f"Error occurred: {e}")
-            # Return a 400 response with the error message
-            return jsonify(error=str(e)), 400
-        
-        # TODO how to manage ajax return functions........ can do without ajax???
+        return apology("time to process event details")
 
-        #data = request.get_json()
-        #logging.debug('Received data: %s', data)
-        # rest of your code
+    
         #insert into events table the event, group, and date from form in create_event
         #insert into teams table all the team names, and event_id
 
-        
-        
         #insert into teams, teams, event
         #insert into team_roster, players on each team
         #insert into handicaps table, event, player, and handicap
@@ -369,8 +355,6 @@ def create_event_continued():
       
         #return apology("to do book event and team details")
     else:
-        return apology("testing")
-        #redirect("/create_event")
-
+        return apology("GET request??")
 
 

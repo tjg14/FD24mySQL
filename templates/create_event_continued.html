@@ -9,7 +9,7 @@
 from all players list in group,  and also input handicap for the event.
 <p></p>
     <div>
-        <form>
+        <form id="create_event_form" action="/create_event_continued" method="post">
             <p><b>Event Name:</b> {{ event_name }}</p>
             <input type="hidden" name="event_name" value="{{ event_name }}">
 
@@ -87,39 +87,8 @@ from all players list in group,  and also input handicap for the event.
         
         var create_event = document.querySelector("button[id='create_event']");
         create_event.addEventListener("click", function() {
-            var num_teams = parseInt(document.querySelector("input[name='num_teams']").value);
-       
-            var teams = [];
-            for (var i = 0; i < num_teams; i++) {
-                var team = {
-                    "team_name": document.querySelector("input[name='team_name_" + i + "']").value,
-                    "player_a": document.querySelector("select[name='player_a_team_" + i + "']").value,
-                    "hcp_a": document.querySelector("input[name='hcp_player_a_team_" + i + "']").value,
-                    "player_b": document.querySelector("select[name='player_b_team_" + i + "']").value,
-                    "hcp_b": document.querySelector("input[name='hcp_player_b_team_" + i + "']").value
-                };   
-                teams.push(team);
-            }
-                
-           var data = {
-                "event_name": document.querySelector("input[name='event_name']").value,
-                "event_date": document.querySelector("input[name='event_date']").value,
-                "num_players": document.querySelector("input[name='num_players']").value,
-                "num_teams": document.querySelector("input[name='num_teams']").value,
-                "teams": teams
-            };
-           
-
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", "/create_event_continued");
-            xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-            xhr.send(JSON.stringify(data));
-            xhr.onload = function() {
-                if (xhr.status == 200) {
-                    window.location.href = xhr.getResponseHeader('Location');
-                }
-            };
-
+            let form = document.getElementById("create_event_form");
+            form.submit();
         });
         
     </script>
