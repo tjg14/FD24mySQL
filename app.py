@@ -340,20 +340,73 @@ def create_event():
 def create_event_continued():
     """Create Event - Team Details"""
     
-
     if request.method == "POST":
-        return apology("time to process event details")
 
+        # Get event header details and error check
+        event_name = request.form.get("event_name")
+        if not event_name:
+            return apology("no event name")
+        event_date = request.form.get("event_date")
+        num_teams = int(request.form.get("num_teams"))
+        if num_teams < 2:
+            return apology("must have at least 2 teams")
+        
+        # Get team details and error check
+        teams = []
+        for i in range(num_teams):
+            team = {}
+            team["team_name_temp"] = request.form.get("team_name_" + str(i))
+            team["player_a_temp"] = request.form.get("player_a_team_" + str(i))
+            team["hcp_a_temp"] = request.form.get("hcp_player_a_team_" + str(i))
+            team["player_b_temp"] = request.form.get("player_b_team_" + str(i))
+            team["hcp_b_temp"] = request.form.get("hcp_player_b_team_" + str(i))
+            teams.append(team)
+
+            if not team["team_name_temp"]:
+                return apology("team name blank")
+            elif not team["player_a_temp"]:
+                return apology("need at least 1 player per team")
+            elif not team["hcp_a_temp"]:
+                return apology("player a handicap blank")
+            if team["player_b_temp"] and not team["hcp_b_temp"]:
+                return apology("player b handicap blank")
+
+        logging.info(teams)
     
-        #insert into events table the event, group, and date from form in create_event
-        #insert into teams table all the team names, and event_id
+        # Insert into events table the event name, group id, and date
+        db.execute("INSERT INTO events (event_name, group_id, date) VALUES (?, ?, ?)", event_name, session["group_id"], event_date)
 
-        #insert into teams, teams, event
-        #insert into team_roster, players on each team
-        #insert into handicaps table, event, player, and handicap
+        # Insert into teams table all the team names, and event_id
+        event_id = db.execute("SELECT * FROM events WHERE event_name = ? AND group_id = ?", event_name, session["group_id"])[0]["id"]
+        for i in range(num_teams):
+            db.execute("INSERT INTO teams (team_name, event_id) VALUES (?, ?)", teams[i]["team_name_temp"], event_id)
 
-      
-        #return apology("to do book event and team details")
+        # Insert into team_roster table the players on each team
+        for i in range(num_teams):
+            team_id = db.execute("SELECT * FROM teams WHERE team_name = ? AND event_id = ?", teams[i]["team_name_temp"], event_id)[0]["id"]
+            player_id_a = db.execute("SELECT * FROM players WHERE player_name = ? AND group_id = ?", 
+                teams[i]["player_a_temp"], session["group_id"])[0]["id"]
+            db.execute("INSERT INTO team_roster (team_id, player_id) VALUES (?, ?)", 
+                team_id, player_id_a)
+            if teams[i]["player_b_temp"]:
+                player_id_b = db.execute("SELECT * FROM players WHERE player_name = ? AND group_id = ?", 
+                    teams[i]["player_b_temp"], session["group_id"])[0]["id"]
+                db.execute("INSERT INTO team_roster (team_id, player_id) VALUES (?, ?)", 
+                    team_id, player_id_b)
+        
+        # Insert into handicaps table for each player id the event id and player hcp
+        for i in range(num_teams):
+            player_id_a = db.execute("SELECT * FROM players WHERE player_name = ? AND group_id = ?", 
+                teams[i]["player_a_temp"], session["group_id"])[0]["id"]
+            db.execute("INSERT INTO handicaps (player_id, event_id, player_hcp) VALUES (?, ?, ?)", 
+                player_id_a, event_id, teams[i]["hcp_a_temp"])
+            if teams[i]["player_b_temp"]:
+                player_id_b = db.execute("SELECT * FROM players WHERE player_name = ? AND group_id = ?", 
+                    teams[i]["player_b_temp"], session["group_id"])[0]["id"]
+                db.execute("INSERT INTO handicaps (player_id, event_id, player_hcp) VALUES (?, ?, ?)", 
+                    player_id_b, event_id, teams[i]["hcp_b_temp"])
+
+        return redirect("/")
     else:
         return apology("GET request??")
 

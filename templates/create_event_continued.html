@@ -5,8 +5,7 @@
 {% endblock %}
 
 {% block main %}
- import team names, put into table with player 1 and 2 options verticl one column; add the players to teams via drop downs 
-from all players list in group,  and also input handicap for the event.
+
 <p></p>
     <div>
         <form id="create_event_form" action="/create_event_continued" method="post">
@@ -24,12 +23,6 @@ from all players list in group,  and also input handicap for the event.
             <p><b>Number of Teams:</b> {{ num_teams }}</p>
             <input type="hidden" name="num_teams" value="{{ num_teams }}">
 
-            <p>
-                {% for player in group_players %} 
-                    {{ player.player_name }}
-                {% endfor %}
-
-            </p>
 
             Note: Enter "plus" handicaps (better than scratch) as negative (-)
 
