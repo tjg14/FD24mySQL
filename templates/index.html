@@ -6,8 +6,61 @@
 
 {% block main %}
     <div class="mx-auto">
-        {{ groupname }}
+        <h2>{{ groupname }}</h2>
     </div>    
 
-On this page i will render a group homepage, showing events, players added, results, etc. Link to create a new event.
+    <i>On this page i will render a group homepage, showing events, players added, results, etc. 
+        Link to create a new event.
+    
+    Get counts, if no complete events, say so
+    </i>
+    <p></p>
+    
+        // Build a table to show the active events
+        <h2>Active Events </h2>
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Rounds</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                    {% if event.status == "Incomplete" %}
+                        <tr>
+                            <td>{{ event.event_name }}</td>
+                            <td>{{ event.date }}</td>
+                            <td>rounds tBD</td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+    <h2>Past Events </h2>
+    <table class="table table-hover table-striped">
+        <thead>
+            <tr>
+                <th>Event Name</th>
+                <th>Date</th>
+                <th>Rounds</th>
+                <th>Winner</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for event in events %}
+                {% if event.status == "Complete" %}
+                    <tr>
+                        <td>{{ event.event_name }}</td>
+                        <td>{{ event.date }}</td>
+                        <td>rounds tBD</td>
+                        <td>Winner tBD</td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
 {% endblock %}

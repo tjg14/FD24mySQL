@@ -39,8 +39,24 @@ def after_request(response):
 @group_login_required
 def index():
     """Show homepage"""
+    
+    # Get groupname
     groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
-    return render_template("index.html", groupname=groupname)
+    
+    # Get events
+    events = db.execute("SELECT * FROM events WHERE group_id = ?", session["group_id"])
+    # Add key to event dictionary for status of each event, complete if >0 matches with Complete Status
+    for event in events:
+        complete_matches = db.execute("SELECT COUNT(status) as count FROM matches WHERE status = 'COMPLETE' AND round_id IN " +
+            "(SELECT round_id FROM rounds WHERE event_id = ?)", event["id"])[0]['count']
+        incomplete_matches = db.execute("SELECT COUNT(status) as count FROM matches WHERE status = 'INCOMPLETE' AND round_id IN " +
+            "(SELECT round_id FROM rounds WHERE event_id = ?)", event["id"])[0]['count']
+        if complete_matches > 0 and not incomplete_matches:
+            event["status"] = "Complete"
+        else:
+            event["status"] = "Incomplete"
+
+    return render_template("index.html", groupname=groupname, events=events)
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -237,8 +253,8 @@ def players():
         groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
         players = db.execute("SELECT * FROM players WHERE group_id = ?", session["group_id"])
         for row in range(len(players)):
-            players[row]["latest_hcp"] = db.execute("SELECT player_hcp FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
-                players[row]["id"])
+            players[row]["latest_hcp"] = db.execute("SELECT * FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
+                players[row]["id"])[0]["player_hcp"]
 
         return render_template("players.html", groupname=groupname, players=players, num_players=len(players))
     
