@@ -6,7 +6,7 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import logging
 
-from helpers import apology, login_required, group_login_required, usd
+from helpers import apology, login_required, group_login_required, event_selected, usd
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -34,29 +34,49 @@ def after_request(response):
     return response
 
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 @login_required
 @group_login_required
 def index():
     """Show homepage"""
     
-    # Get groupname
-    groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
+    if request.method == "POST":
+        # Get event_name, add event id to sessions, and redirect to event page
+        event_name = request.form.get("event_name")
+        event_id = db.execute("SELECT * FROM events WHERE event_name = ? AND group_id = ?", event_name, session["group_id"])[0]["id"]
+        session["event_id"] = event_id
+        return redirect("/event")
+    else:
+        # Remove any specific event in session
+        if session.get("event_id") is not None:
+            session.pop("event_id", None)
+        
+        # Get groupname via session group_id
+        groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
+        
+        # Get events dictionary for group_id
+        events = db.execute("SELECT * FROM events WHERE group_id = ?", session["group_id"])
+        
+        # Get data for rendering index.html tables of events..
+        # Add key to event dictionary for status of each event, showing complete if >0 matches with Complete status
+        # and incomplete if any matches are incomplete
+        for event in events:
+            complete_events_count = 0
+            incomplete_events_count = 0
+            complete_matches = db.execute("SELECT COUNT(status) as count FROM matches WHERE status = 'COMPLETE' AND round_id IN " +
+                "(SELECT round_id FROM rounds WHERE event_id = ?)", event["id"])[0]['count']
+            incomplete_matches = db.execute("SELECT COUNT(status) as count FROM matches WHERE status = 'INCOMPLETE' AND round_id IN " +
+                "(SELECT round_id FROM rounds WHERE event_id = ?)", event["id"])[0]['count']
+            if complete_matches > 0 and not incomplete_matches:
+                event["status"] = "Complete"
+                complete_events_count += 1
+            else:
+                event["status"] = "Incomplete"
+                incomplete_events_count += 1
+            
+        return render_template("index.html", groupname=groupname, events=events, complete_events_count=complete_events_count,
+            incomplete_events_count=incomplete_events_count)
     
-    # Get events
-    events = db.execute("SELECT * FROM events WHERE group_id = ?", session["group_id"])
-    # Add key to event dictionary for status of each event, complete if >0 matches with Complete Status
-    for event in events:
-        complete_matches = db.execute("SELECT COUNT(status) as count FROM matches WHERE status = 'COMPLETE' AND round_id IN " +
-            "(SELECT round_id FROM rounds WHERE event_id = ?)", event["id"])[0]['count']
-        incomplete_matches = db.execute("SELECT COUNT(status) as count FROM matches WHERE status = 'INCOMPLETE' AND round_id IN " +
-            "(SELECT round_id FROM rounds WHERE event_id = ?)", event["id"])[0]['count']
-        if complete_matches > 0 and not incomplete_matches:
-            event["status"] = "Complete"
-        else:
-            event["status"] = "Incomplete"
-
-    return render_template("index.html", groupname=groupname, events=events)
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -144,9 +164,11 @@ def logout():
 def group():
     """Show options to join group or create group"""
 
-    # Forget any group_id in session
+    # Forget any group_id and event_id in session
     if session.get("group_id") is not None:
         session.pop("group_id", None)
+    if session.get("event_id") is not None:
+        session.pop("event_id", None)
 
     # Render group.html showing options to join group or create group
     return render_template("group.html")
@@ -427,3 +449,18 @@ def create_event_continued():
         return apology("GET request??")
 
 
+@app.route("/event", methods=["GET", "POST"])
+@login_required
+@group_login_required
+@event_selected
+def event():
+    """Event Details
+    TODO
+    - total number of rounds (to help status, can be changed) add new round, set matches (dont limit - add new round whenever)
+    - then links to scorecard for each match
+    dynamic page
+    overall scoreboard
+    
+    """
+  
+    return apology("To Do EVent page")

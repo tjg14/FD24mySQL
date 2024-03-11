@@ -9,14 +9,9 @@
         <h2>{{ groupname }}</h2>
     </div>    
 
-    <i>On this page i will render a group homepage, showing events, players added, results, etc. 
-        Link to create a new event.
-    
-    Get counts, if no complete events, say so
-    </i>
     <p></p>
     
-        // Build a table to show the active events
+        <!-- Build a table to show the active events -->
         <h2>Active Events </h2>
         <table class="table table-hover table-striped">
             <thead>
@@ -30,15 +25,26 @@
                 {% for event in events %}
                     {% if event.status == "Incomplete" %}
                         <tr>
-                            <td>{{ event.event_name }}</td>
+                            <td>
+                                <form action="/" method="post">
+                                    <input type="hidden" name="event_name" value="{{ event.event_name }}">
+                                    <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">{{ event.event_name }}</button>
+                                </form>
+                            </td>
                             <td>{{ event.date }}</td>
                             <td>rounds tBD</td>
                         </tr>
                     {% endif %}
                 {% endfor %}
+                {% if not incomplete_events_count %}
+                        <tr>
+                            <td colspan="3">No active events</td>
+                        </tr>
+                {% endif %}
             </tbody>
         </table>
 
+    <!-- Build a table to show completed events -->
     <h2>Past Events </h2>
     <table class="table table-hover table-striped">
         <thead>
@@ -53,13 +59,23 @@
             {% for event in events %}
                 {% if event.status == "Complete" %}
                     <tr>
-                        <td>{{ event.event_name }}</td>
+                        <td>
+                            <form action="/" method="post">
+                                <input type="hidden" name="event_name" value="{{ event.event_name }}">
+                                <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">{{ event.event_name }}</button>
+                            </form>
+                        </td>
                         <td>{{ event.date }}</td>
                         <td>rounds tBD</td>
                         <td>Winner tBD</td>
                     </tr>
                 {% endif %}
             {% endfor %}
+            {% if not complete_events_count %}
+                        <tr>
+                            <td colspan="4">No completed events</td>
+                        </tr>
+            {% endif %}
         </tbody>
     </table>
 

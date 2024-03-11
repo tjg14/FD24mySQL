@@ -29,13 +29,16 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbar">
-                    {% if (session["user_id"] and not session["group_id"]) %}
+                    
+                    {% if session["user_id"] and session["group_id"] and session["event_id"] %}
+                        <ul class="navbar-nav me-auto mt-2">
+                            <li class="nav-item"><a class="nav-link" href="/">Group Home</a></li>
+                        </ul>
                         <ul class="navbar-nav ms-auto mt-2">
-                            <li class="nav-item"><a class="nav-link" href="/create_group">New Group</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/group_login">Enter Group</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/group">Switch Group</a></li>
                             <li class="nav-item"><a class="nav-link" href="/logout">Log Out</a></li>
                         </ul>
-                    {% elif session["user_id"] %}
+                    {% elif session["user_id"] and session["group_id"] %}
                         <ul class="navbar-nav me-auto mt-2">
                             <li class="nav-item"><a class="nav-link" href="/players">Players</a></li>
                             <li class="nav-item"><a class="nav-link" href="/">Events</a></li>
@@ -43,6 +46,12 @@
                         </ul>
                         <ul class="navbar-nav ms-auto mt-2">
                             <li class="nav-item"><a class="nav-link" href="/group">Switch Group</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/logout">Log Out</a></li>
+                        </ul>
+                    {% elif session["user_id"] %} 
+                        <ul class="navbar-nav ms-auto mt-2">
+                            <li class="nav-item"><a class="nav-link" href="/create_group">New Group</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/group_login">Enter Group</a></li>
                             <li class="nav-item"><a class="nav-link" href="/logout">Log Out</a></li>
                         </ul>
                     {% else %}

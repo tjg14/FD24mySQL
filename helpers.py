@@ -40,11 +40,7 @@ def login_required(f):
 
 
 def group_login_required(f):
-    """
-    Decorate routes to require login to a group.
-
-    http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
-    """
+    """ Decorate routes to require login to a group."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("group_id") is None:
@@ -52,6 +48,14 @@ def group_login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def event_selected(f):
+    """ Decorate routes to require event in session."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("event_id") is None:
+            return redirect("/")
+        return f(*args, **kwargs)
+    return decorated_function
 
 def usd(value):
     """Format value as USD."""
