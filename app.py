@@ -45,7 +45,7 @@ def index():
         event_name = request.form.get("event_name")
         event_id = db.execute("SELECT * FROM events WHERE event_name = ? AND group_id = ?", event_name, session["group_id"])[0]["id"]
         session["event_id"] = event_id
-        return redirect("/event")
+        return redirect("/event_scoreboard")
     else:
         # Remove any specific event in session
         if session.get("event_id") is not None:
@@ -449,11 +449,11 @@ def create_event_continued():
         return apology("GET request??")
 
 
-@app.route("/event", methods=["GET", "POST"])
+@app.route("/event_structure", methods=["GET", "POST"])
 @login_required
 @group_login_required
 @event_selected
-def event():
+def event_structure():
     """Event Details
     TODO
     - total number of rounds (to help status, can be changed) add new round, set matches (dont limit - add new round whenever)
@@ -464,3 +464,17 @@ def event():
     """
   
     return apology("To Do EVent page")
+
+@app.route("/event_scoreboard", methods=["GET", "POST"])
+@login_required
+@group_login_required
+@event_selected
+def event_scoreboard():
+    """Event Scoreboard
+    TODO
+  
+    overall scoreboard
+    
+    """
+  
+    return apology("To Do Event Scoreboard")
