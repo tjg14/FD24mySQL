@@ -275,9 +275,12 @@ def players():
         groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
         players = db.execute("SELECT * FROM players WHERE group_id = ?", session["group_id"])
         for row in range(len(players)):
-            players[row]["latest_hcp"] = db.execute("SELECT * FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
-                players[row]["id"])[0]["player_hcp"]
-
+            try:
+                players[row]["latest_hcp"] = db.execute("SELECT * FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
+                    players[row]["id"])[0]["player_hcp"]
+            except:
+                players[row]["latest_hcp"] = None
+            
         return render_template("players.html", groupname=groupname, players=players, num_players=len(players))
     
 
@@ -462,8 +465,10 @@ def event_structure():
     overall scoreboard
     
     """
-  
-    return apology("To Do EVent page")
+    rounds = db.execute("SELECT * FROM rounds WHERE event_id = ?", session["event_id"])
+    num_teams = db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"]
+
+    return render_template("event_structure.html", rounds=rounds, num_teams=num_teams)
 
 @app.route("/event_scoreboard", methods=["GET", "POST"])
 @login_required

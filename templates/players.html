@@ -96,10 +96,10 @@
             var rowCount = playerTable.rows.length;
             let index = 2;
             for (var i = 0; i < rowCount; i++) {
-                playerTable.rows[i].deleteCell(index);
+                if (playerTable.rows[i].cells.length > index) {
+                    playerTable.rows[i].deleteCell(index);
+                }
             }
-            
-
 
             // Hide the add player button
             addPlayerButton.style.display = "none";
@@ -112,7 +112,7 @@
             });
         });
 
-        
+
     </script>
 
 {% endblock %}
