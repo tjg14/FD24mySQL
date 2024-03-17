@@ -11,6 +11,11 @@
         <form action="/event_structure" method="post" id="event_details_form">
             <div class="mb-3">
                 <p><b>Event Name:</b> {{ event_name }}</p>
+                <p><b>Number of teams:</b> {{ num_teams }}</p>
+                <input type="hidden" name="num_teams" value="{{ num_teams }}">
+                {% for team in teams %}
+                    <input class="team_names" type="hidden" name="team_{{ loop.index }}" value="{{ team.team_name }}">
+                {% endfor %}
             
             </div>
             <p></p>
@@ -70,63 +75,92 @@
             <div>
                 <button class="btn btn-primary" id = "add_round_btn">Add New Round </button>
             </div>
+            <div>
+             
+                <button class="btn btn-primary" id = "submit_round_btn" style="display: none;"> Save Round </button>
+            </div>
             <p></p>
 
         </form>
     </div>
     <script>
-        // When user clicks on the add round button, add a new set of rows to the table for the new round
-        // which includes a row with the round number, an input cell for the round name and third cell with word edit
-        // then for each team, add a row with the match number colspan 2 and a cell with the word scorecard
-        // then add a row for each team a and team b that the user will select to setup using a dropdown menu
 
         let roundsTable = document.getElementById("rounds_table");
         let addRoundButton = document.getElementById("add_round_btn");
+        let saveRoundButton = document.getElementById("submit_round_btn");
+        let num_teams_input = document.querySelector("input[name='num_teams']");
+        let num_teams = parseInt(num_teams_input.value, 10);
+        let num_matches = num_teams / 2;
+        let teamInputs = document.querySelectorAll("input[class='team_names']");
+        let teamNames = [];
+        teamInputs.forEach(function(input) {
+        teamNames.push(input.value);
+        });
 
-        addRoundButton.addEventListener("click", function() {
+        addRoundButton.addEventListener("click", function(event) {
+            event.preventDefault();
 
-            // Hide the add round button
             addRoundButton.style.display = "none";
+            saveRoundButton.style.display = "inline-block";
 
-
-            let newRow = roundsTable.insertRow();
-            let newCell = newRow.insertCell(0);
+            let newRoundRow = roundsTable.insertRow();
+            let newCell = newRoundRow.insertCell(0);
             newCell.innerHTML = "New Round";
-            let newCell2 = newRow.insertCell(1);
+            let newCell2 = newRoundRow.insertCell(1);
             newCell2.colSpan = 2;
             let newInput = document.createElement("input");
             newInput.type = "text";
             newInput.name = "new_round_name";
             newInput.placeholder = "Round Name (Opt)";
             newCell2.appendChild(newInput);
-            /*
-            let newRow2 = roundsTable.insertRow();
-            let newCell2_1 = newRow2.insertCell(0);
-            newCell2_1.colSpan = 3;
-            newCell2_1.innerHTML = "Match 1";
-            
-            for (let i = 0; i < 2; i++) {
-                let newRow = roundsTable.insertRow();
-                let newCell = newRow.insertCell(0);
-                newCell.colSpan = 3;
-                let newInput = document.createElement("input");
-                newInput.type = "text";
-                newInput.name = "TEAMA";
-                newInput.placeholder = "TEAMA";
-                newCell.appendChild(newInput);
-               
-                let newRow2 = roundsTable.insertRow();
-                let newCell2 = newRow2.insertCell(0);
-                newCell2.colSpan = 3;
-                let newInput2 = document.createElement("input");
-                newInput2.type = "text";
-                newInput2.name = "teamb";
-                newInput2.placeholder = "teamb";
-                newCell3.appendChild(newInput2);
-            }
-            */
-        });
 
+            for (let i = 0; i < num_matches; i++) {
+                let newMatchRow = roundsTable.insertRow();
+                let newCell2_1 = newMatchRow.insertCell(0);
+                newCell2_1.colSpan = 3;
+                newCell2_1.innerHTML = "Match " + (i + 1);
+
+                let newTeamRow = roundsTable.insertRow();
+                let newTeamCell = newTeamRow.insertCell(0);
+                newTeamCell.colSpan = 3;
+                let newSelect = document.createElement("select");
+                newSelect.name = "team_a_match_" + (i + 1);
+                let defaultOptionA = document.createElement("option");
+                defaultOptionA.value = "";
+                defaultOptionA.text = "Select a team";
+                defaultOptionA.disabled = true;
+                defaultOptionA.selected = true;
+                newSelect.appendChild(defaultOptionA);
+                teamNames.forEach(function(name) {
+                    let option = document.createElement("option");
+                    option.value = name;
+                    option.text = name;
+                    newSelect.appendChild(option);
+                });
+                newTeamCell.appendChild(newSelect);
+               
+                let newTeamRow2 = roundsTable.insertRow();
+                let newTeamCell2 = newTeamRow2.insertCell(0);
+                newTeamCell2.colSpan = 3;
+                let newSelect2 = document.createElement("select");
+                newSelect2.name = "team_b_match_" + (i + 1);
+                let defaultOptionB = document.createElement("option");
+                defaultOptionB.value = "";
+                defaultOptionB.text = "Select a team";
+                defaultOptionB.disabled = true;
+                defaultOptionB.selected = true;
+                newSelect2.appendChild(defaultOptionB);
+                teamNames.forEach(function(name) {
+                    let option = document.createElement("option");
+                    option.value = name;
+                    option.text = name;
+                    newSelect2.appendChild(option);
+                });
+                newTeamCell2.appendChild(newSelect2);
+            }
+            
+        });
+       
     </script>
 {% endblock %}
 

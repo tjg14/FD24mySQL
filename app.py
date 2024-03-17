@@ -465,10 +465,13 @@ def event_structure():
     overall scoreboard
     
     """
-    rounds = db.execute("SELECT * FROM rounds WHERE event_id = ?", session["event_id"])
+    rounds = db.execute("SELECT * FROM rounds WHERE event_id = ? ORDER BY round_number ASC", session["event_id"])
     num_teams = db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"]
+    event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
+    teams = db.execute("SELECT * FROM teams WHERE event_id = ?", session["event_id"])
 
-    return render_template("event_structure.html", rounds=rounds, num_teams=num_teams)
+    return render_template("event_structure.html", rounds=rounds, num_teams=num_teams, event_name=event_name,
+        teams=teams)
 
 @app.route("/event_scoreboard", methods=["GET", "POST"])
 @login_required
