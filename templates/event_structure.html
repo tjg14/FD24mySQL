@@ -46,6 +46,9 @@
                             </tr>
                             {%  for i in range(num_teams) %}
                                 <tr>
+                                    <td colspan="3">Course: tbd name</td>
+                                </tr>  
+                                <tr>
                                     <td colspan="2">Match {{ loop.index }}</td>
                                     <td>scorecard</td>
                                 </tr>
@@ -113,6 +116,11 @@
             newInput.name = "new_round_name";
             newInput.placeholder = "Round Name (Opt)";
             newCell2.appendChild(newInput);
+            let newCourseRow = roundsTable.insertRow();
+            let newCourseCell = newCourseRow.insertCell(0);
+            newCourseCell.colSpan = 3;
+            newCourseCell.innerHTML = "Course: todo select";
+
 
             for (let i = 0; i < num_matches; i++) {
                 let newMatchRow = roundsTable.insertRow();
@@ -159,6 +167,12 @@
                 newTeamCell2.appendChild(newSelect2);
             }
             
+        });
+
+        saveRoundButton.addEventListener("click", function(event) {
+            event.preventDefault();
+            let form = document.getElementById("event_details_form");
+            form.submit();
         });
        
     </script>

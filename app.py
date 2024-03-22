@@ -457,21 +457,27 @@ def create_event_continued():
 @group_login_required
 @event_selected
 def event_structure():
-    """Event Details
-    TODO
-    - total number of rounds (to help status, can be changed) add new round, set matches (dont limit - add new round whenever)
-    - then links to scorecard for each match
-    dynamic page
-    overall scoreboard
-    
-    """
-    rounds = db.execute("SELECT * FROM rounds WHERE event_id = ? ORDER BY round_number ASC", session["event_id"])
-    num_teams = db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"]
-    event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
-    teams = db.execute("SELECT * FROM teams WHERE event_id = ?", session["event_id"])
+    """Event Details"""
 
-    return render_template("event_structure.html", rounds=rounds, num_teams=num_teams, event_name=event_name,
-        teams=teams)
+    if request.method == "POST":
+        # Get new round name
+        new_round_name = request.form.get("new_round_name")
+        # Get course selection
+        course_name = request.form.get("course_name")
+        # Get round number
+        # Get teams and matches
+
+
+
+    else:
+        # Get event data needed to display and structure matches in rounds
+        rounds = db.execute("SELECT * FROM rounds WHERE event_id = ? ORDER BY round_number ASC", session["event_id"])
+        num_teams = db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"]
+        event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
+        teams = db.execute("SELECT * FROM teams WHERE event_id = ?", session["event_id"])
+
+        return render_template("event_structure.html", rounds=rounds, num_teams=num_teams, event_name=event_name,
+            teams=teams)
 
 @app.route("/event_scoreboard", methods=["GET", "POST"])
 @login_required
@@ -486,3 +492,76 @@ def event_scoreboard():
     """
   
     return apology("To Do Event Scoreboard")
+
+@app.route("/courseadmin", methods=["GET", "POST"])
+@login_required
+def course_admin():
+    """Add courses to database in admin mode"""
+    if request.method == "POST":
+        # Get course name
+        course_name = request.form.get("new_course_name")
+        if not course_name:
+            return apology("no course name")
+        # Get course tees
+        course_tees = request.form.get("course_tees")
+        if not course_tees:
+            return apology("no course tees")
+        # Get course slope
+        course_slope = request.form.get("course_tee_slope")
+        # Make sure course slope is not blank and is an integer betwee 55 and 155
+        if not course_slope:
+            return apology("no course slope")
+        try:
+            course_slope = int(course_slope)
+            if course_slope < 55 or course_slope > 155:
+                return apology("course slope must be between 55 and 155")
+        except ValueError:
+            return apology("course slope must be an integer")
+        # Get course rating
+        course_rating = request.form.get("course_tee_rating")
+        # Make sure course rating is not blank and is a float between 50 and 80
+        if not course_rating:
+            return apology("no course rating")
+        try:
+            course_rating = float(course_rating)
+            if course_rating < 50 or course_rating > 80:
+                return apology("course rating must be between 50 and 80")
+        except ValueError:
+            return apology("course rating must be a float")
+        
+        # Loop through all 18 holes, get par and handicap for each hole
+        holes = []
+        for i in range(1, 19):
+            par = request.form.get("hole_par_" + str(i))
+            if not par:
+                return apology("no par for hole " + str(i))
+            try:
+                par = int(par)
+            except ValueError:
+                return apology("par for hole " + str(i) + " must be an integer")
+            handicap = request.form.get("hole_hcp_" + str(i))
+            if not handicap:
+                return apology("no handicap for hole " + str(i))
+            try:
+                handicap = int(handicap)
+            except ValueError:
+                return apology("handicap for hole " + str(i) + " must be an integer")
+            holes.append({"hole": i, "par": par, "handicap": handicap})
+        
+        # Insert course into courses table
+        db.execute("INSERT INTO course_tee (name, teebox, rating, slope) VALUES (?, ?, ?, ?)",
+            course_name, course_tees, course_rating, course_slope)
+        # Get course id
+        course_id = db.execute("SELECT MAX(id) FROM course_tee WHERE name = ? AND teebox = ?", 
+            course_name, course_tees)[0]["id"]
+        # Insert holes into holes table
+        for hole in holes:
+            db.execute("INSERT INTO holes (course_id, hole_number, par, hole_hcp) VALUES (?, ?, ?, ?)",
+                course_id, hole["hole"], hole["par"], hole["handicap"])
+
+        #TODO add course and check if works
+            
+            
+        return apology("To Finish - redirect to /")
+    else:
+        return render_template("course_input.html")

@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Course Input Admin
+{% endblock %}
+
+{% block main %}
+
+    <h2>Add a New Course to Database</h2>
+
+    <form action="/courseadmin" method="post" id="add_course_form">
+    
+        <div>
+            Course Name: <input type="text" name="new_course_name" placeholder="Course Name" required>
+            Tees: <input type="text" name="course_tees" placeholder="Tees" required>
+            Slope: <input type="number" name="course_tee_slope" step="1" placeholder="Slope (e.g., 132)" required>
+            Rating: <input type="number" name="course_tee_rating" step="0.1" placeholder="Rating (e.g., 72.5)" required>
+        </div>
+        <div>
+            <table class="table table-hover table-striped">
+                <thead>
+                    <tr>
+                        <th>Hole</th>
+                        <th>Par</th>
+                        <th>Handicap</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in range(1, 19) %}
+                        <tr>
+                            <td>{{ i }}</td>
+                            <td><input type="number" name="hole_par_{{ i }}" step="1" placeholder="Par" required></td>
+                            <td><input type="number" name="hole_hcp_{{ i }}" step="1" placeholder="Handicap" required></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p></p>
+        <button class="btn btn-primary" id = "add_course_btn" type="submit" >Add Course</button>
+    </form>
+ 
+
+{% endblock %}
+
