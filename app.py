@@ -195,7 +195,7 @@ def group_login():
             return apology("must provide password", 400)
 
         # Query database for groupname
-        rows_groups = db.execute("SELECT * FROM groups WHERE groupname = ?", request.form.get("groupname"))
+        rows_groups = db.execute("SELECT * FROM groups WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
 
         # Ensure username exists and password is correct
         if len(rows_groups) != 1 or not check_password_hash(rows_groups[0]["hash"], request.form.get("password")):
@@ -229,7 +229,7 @@ def create_group():
             return apology("must provide group name and password", 400)
 
         # Query database for group name
-        rows = db.execute("SELECT * FROM groups WHERE groupname = ?", request.form.get("groupname"))
+        rows = db.execute("SELECT * FROM groups WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
 
         # Check if groupname already exists
         if len(rows) > 0:
@@ -239,7 +239,7 @@ def create_group():
         if request.form.get("password") != request.form.get("confirmation"):
             return apology("Passwords don't match", 400)
 
-        # Register group into gruops database
+        # Register group into groups database
         db.execute("INSERT INTO groups (groupname, hash) VALUES (?, ?)", request.form.get("groupname"), 
             generate_password_hash(request.form.get("password")))
 
