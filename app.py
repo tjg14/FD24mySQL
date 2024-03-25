@@ -1,7 +1,7 @@
 import os, math
 
 from cs50 import SQL
-from flask import Flask, flash, redirect, render_template, request, session
+from flask import Flask, jsonify, flash, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import logging
@@ -460,13 +460,25 @@ def event_structure():
     """Event Details"""
 
     if request.method == "POST":
-        # Get new round name
+        # Get new round name (optional)
         new_round_name = request.form.get("new_round_name")
         # Get course selection
-        course_name = request.form.get("course_name")
+        course_id_selected = request.form.get("course_select")
+        if not course_id_selected:
+            return apology("no course selected")
         # Get round number
+        round_number = int(request.form.get("num_rounds_input")) + 1
         # Get teams and matches
-
+        num_teams = db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"]
+        matches = []
+        for i in range(num_teams / 2):
+            team_a_id = int(request.form.get("team_a_match" + str(i)))
+            team_b_id = int(request.form.get("team_b_match" + str(i)))
+            if not team_a or not team_b:
+                return apology("team not selected - match " + str(i))
+            matches.append({"match_number": i, "team_a": team_a_id, "team_b": team_b_id})
+        
+        #TODO IDS are fixed - now try to add rounds and matches into database tables
 
 
     else:
@@ -553,15 +565,24 @@ def course_admin():
             course_name, course_tees, course_rating, course_slope)
         # Get course id
         course_id = db.execute("SELECT MAX(id) FROM course_tee WHERE name = ? AND teebox = ?", 
-            course_name, course_tees)[0]["id"]
+            course_name, course_tees)[0]["MAX(id)"]
         # Insert holes into holes table
         for hole in holes:
             db.execute("INSERT INTO holes (course_id, hole_number, par, hole_hcp) VALUES (?, ?, ?, ?)",
                 course_id, hole["hole"], hole["par"], hole["handicap"])
-
-        #TODO add course and check if works
-            
-            
-        return apology("To Finish - redirect to /")
+             
+        return redirect("/")
     else:
         return render_template("course_input.html")
+    
+@app.route('/api/courses', methods=['GET'])
+def get_courses():
+    # Query the database for all courses
+    courses = db.execute("SELECT * FROM course_tee")
+
+    # Convert the list of Course objects to a list of dictionaries
+    courses_list = [{"id": course["id"], "name": course["name"] + " - " + course["teebox"] + " " +
+        str(course["rating"]) + "/" + str(course["slope"])} for course in courses]
+
+    # Return the list of courses as JSON
+    return jsonify(courses_list)

@@ -13,8 +13,9 @@
                 <p><b>Event Name:</b> {{ event_name }}</p>
                 <p><b>Number of teams:</b> {{ num_teams }}</p>
                 <input type="hidden" name="num_teams" value="{{ num_teams }}">
+                <input type="hidden" name="num_rounds_input" value="{{ rounds|length }}">
                 {% for team in teams %}
-                    <input class="team_names" type="hidden" name="team_{{ loop.index }}" value="{{ team.team_name }}">
+                    <input class="team_names" type="hidden" name="team_{{ loop.index }}" data-id="{{ team.id }}" value="{{ team.team_name }}">
                 {% endfor %}
             
             </div>
@@ -94,11 +95,18 @@
         let num_teams_input = document.querySelector("input[name='num_teams']");
         let num_teams = parseInt(num_teams_input.value, 10);
         let num_matches = num_teams / 2;
+        console.log("first breakpoint");
         let teamInputs = document.querySelectorAll("input[class='team_names']");
-        let teamNames = [];
+        teamNames = [];
         teamInputs.forEach(function(input) {
-        teamNames.push(input.value);
+            let team = {
+                id: input.dataset.id,
+                name: input.value
+            };
+            teamNames.push(team);
         });
+
+        console.log("second breakpoint");
 
         addRoundButton.addEventListener("click", function(event) {
             event.preventDefault();
@@ -119,8 +127,33 @@
             let newCourseRow = roundsTable.insertRow();
             let newCourseCell = newCourseRow.insertCell(0);
             newCourseCell.colSpan = 3;
-            newCourseCell.innerHTML = "Course: todo select";
+            // Fetch the courses from the server
+            fetch('/api/courses')
+                .then(response => response.json())
+                .then(courses => {
+                    // Create a select element
+                    let selectCourse = document.createElement('select');
+                    selectCourse.name = 'course_select';
 
+                    let defaultCourseOption = document.createElement("option");
+                    defaultCourseOption.value = "";
+                    defaultCourseOption.text = "Select a course";
+                    defaultCourseOption.disabled = true;
+                    defaultCourseOption.selected = true;
+                    selectCourse.appendChild(defaultCourseOption);
+
+                    // Add an option for each course
+                    courses.forEach(course => {
+                        let optionCourse = document.createElement('option');
+                        optionCourse.value = course.id; 
+                        optionCourse.text = course.name; 
+                        selectCourse.appendChild(optionCourse);
+                    });
+
+                    // Append the select element to the cell
+                    newCourseCell.appendChild(selectCourse);
+                })
+                .catch(error => console.error('Error:', error));
 
             for (let i = 0; i < num_matches; i++) {
                 let newMatchRow = roundsTable.insertRow();
@@ -139,10 +172,10 @@
                 defaultOptionA.disabled = true;
                 defaultOptionA.selected = true;
                 newSelect.appendChild(defaultOptionA);
-                teamNames.forEach(function(name) {
+                teamNames.forEach(function(team) {
                     let option = document.createElement("option");
-                    option.value = name;
-                    option.text = name;
+                    option.value = team.id;
+                    option.text = team.name;
                     newSelect.appendChild(option);
                 });
                 newTeamCell.appendChild(newSelect);
@@ -158,10 +191,10 @@
                 defaultOptionB.disabled = true;
                 defaultOptionB.selected = true;
                 newSelect2.appendChild(defaultOptionB);
-                teamNames.forEach(function(name) {
+                teamNames.forEach(function(team) {
                     let option = document.createElement("option");
-                    option.value = name;
-                    option.text = name;
+                    option.value = team.id;
+                    option.text = team.name;
                     newSelect2.appendChild(option);
                 });
                 newTeamCell2.appendChild(newSelect2);
