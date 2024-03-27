@@ -45,29 +45,29 @@
                                     </span>
                                 </td>
                             </tr>
-                            {%  for i in range(num_teams) %}
+                            {%  for match in round.matches %}
                                 <tr>
-                                    <td colspan="3">Course: tbd name via database</td>
+                                    <td colspan="3">Course: {{ match.course_name }}</td>
                                 </tr>  
                                 <tr>
-                                    <td colspan="2">Match {{ loop.index }}</td>
+                                    <td colspan="2">Match {{ match.match_number }}</td>
                                     <td>scorecard</td>
                                 </tr>
                                 <tr>
                                     <td>
-                                        team a
+                                        {{ match.team_a }}
                                     </td>
                                     <td>
-                                        team a score
+                                        {{ match.team_a_score }}
                                     </td>
                                     <td></td>
                                 </tr>
                                 <tr>
                                     <td>
-                                        team b
+                                        {{ match.team_b }}
                                     </td>
                                     <td>
-                                        team b score
+                                        {{ match.team_b_score }}
                                     </td>
                                     <td></td>
                                 </tr>

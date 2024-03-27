@@ -469,21 +469,43 @@ def event_structure():
         # Get round number
         round_number = int(request.form.get("num_rounds_input")) + 1
         # Get teams and matches
-        num_teams = db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"]
+        num_teams = int(db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"])
+        num_matches = int(num_teams / 2)
         matches = []
-        for i in range(num_teams / 2):
-            team_a_id = int(request.form.get("team_a_match" + str(i)))
-            team_b_id = int(request.form.get("team_b_match" + str(i)))
-            if not team_a or not team_b:
-                return apology("team not selected - match " + str(i))
-            matches.append({"match_number": i, "team_a": team_a_id, "team_b": team_b_id})
+        for i in range(num_matches):
+            team_a_id = int(request.form.get("team_a_match_" + str(i + 1)))
+            team_b_id = int(request.form.get("team_b_match_" + str(i + 1)))
+            if not team_a_id or not team_b_id:
+                return apology("team not selected - match " + str(i + 1))
+            matches.append({"match_number": i + 1, "team_a": team_a_id, "team_b": team_b_id})
         
-        #TODO IDS are fixed - now try to add rounds and matches into database tables
+        # Insert new round into rounds table
+        db.execute("INSERT INTO rounds (round_number, round_name, event_id) VALUES (?, ?, ?)",
+            round_number, new_round_name, session["event_id"])
+        # Get round id
+        round_id = db.execute("SELECT MAX(id) FROM rounds WHERE event_id = ?", session["event_id"])[0]["MAX(id)"]
+        # Insert matches into matches table
+        for match in matches:
+            db.execute("INSERT INTO matches (match_number, match_starting_hole, round_id, course_id," +
+                "team_a_id, team_b_id) VALUES (?, ?, ?, ?, ?, ?)", match["match_number"], 1, round_id,
+                course_id_selected, match["team_a"], match["team_b"])
 
-
+        return redirect("/event_structure")
     else:
         # Get event data needed to display and structure matches in rounds
         rounds = db.execute("SELECT * FROM rounds WHERE event_id = ? ORDER BY round_number ASC", session["event_id"])
+        # Built list of dictionaries for each round with round number, round name, and matches (match number, team a, team b, team a score, team b score)
+        for round in rounds:
+            matches = db.execute("SELECT * FROM matches WHERE round_id = ?", round["id"])
+            round["matches"] = []
+            for match in matches:
+                team_a = db.execute("SELECT * FROM teams WHERE id = ?", match["team_a_id"])[0]["team_name"]
+                team_b = db.execute("SELECT * FROM teams WHERE id = ?", match["team_b_id"])[0]["team_name"]
+                course_name = db.execute("SELECT * FROM course_tee WHERE id = ?", match["course_id"])[0]["name"]
+                course_tees = db.execute("SELECT * FROM course_tee WHERE id = ?", match["course_id"])[0]["teebox"]
+                round["matches"].append({"match_number": match["match_number"], "course_name": course_name + " - " +course_tees + " Tees",
+                     "team_a": team_a, "team_b": team_b, "team_a_score": "create fn", "team_b_score": "create fn"})
+       
         num_teams = db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"]
         event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
         teams = db.execute("SELECT * FROM teams WHERE event_id = ?", session["event_id"])
@@ -586,3 +608,8 @@ def get_courses():
 
     # Return the list of courses as JSON
     return jsonify(courses_list)
+
+@app.route('/scorecard', methods=['GET', 'POST'])
+def scorecard():
+
+    return apology("To Do Scorecard")

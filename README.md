@@ -125,7 +125,7 @@ CREATE TABLE matches (
     team_b_id INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT INCOMPLETE,
     FOREIGN KEY (round_id) REFERENCES rounds(id),
-    FOREIGN KEY (course_id) REFERENCES courses(id),
+    FOREIGN KEY (course_id) REFERENCES course_tee(id),
     FOREIGN KEY (team_a_id) REFERENCES teams(id),
     FOREIGN KEY (team_b_id) REFERENCES teams(id)
 );
