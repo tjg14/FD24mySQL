@@ -5,10 +5,9 @@
 {% endblock %}
 
 {% block main %}
-
-<p></p>
-    <div>
-        <form action="/event_structure" method="post" id="event_details_form">
+    <br>
+    <div class="mx-auto">
+        <form action="/event_structure" method="post" id="event_details_form"></form>   
             <div class="mb-3">
                 <p><b>Event Name:</b> {{ event_name }}</p>
                 <p><b>Number of teams:</b> {{ num_teams }}</p>
@@ -17,10 +16,8 @@
                 {% for team in teams %}
                     <input class="team_names" type="hidden" name="team_{{ loop.index }}" data-id="{{ team.id }}" value="{{ team.team_name }}">
                 {% endfor %}
-            
             </div>
-            <p></p>
-
+            <br>
             <div class="mx-auto" id="event_structure_table">
                 <h2>Event Rounds & Matches</h2>
                 <br>
@@ -47,11 +44,21 @@
                             </tr>
                             {%  for match in round.matches %}
                                 <tr>
-                                    <td colspan="3">Course: {{ match.course_name }}</td>
+                                    <!--If this is the first match in the round, display the course name..
+                                    save functionality for later if needed different courses within one round-->
+                                    {% if loop.first %}
+                                        <td colspan="3">Course: {{ match.course_name }}</td>
+                                    {% endif %}
                                 </tr>  
                                 <tr>
                                     <td colspan="2">Match {{ match.match_number }}</td>
-                                    <td>scorecard</td>
+                                    <td>
+                                        <form action="/scorecard" method="post">
+                                            <input type="hidden" name="round_number" value="{{ round.round_number }}">
+                                            <input type="hidden" name="match_number" value="{{ match.match_number }}">
+                                            <button type="submit" class="btn btn-link scorecard-link" style="color: green; text-decoration: underline;">Scorecard</button>
+                                        </form>
+                                    </td>
                                 </tr>
                                 <tr>
                                     <td>
@@ -75,16 +82,13 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                
+            </div>
             <div>
                 <button class="btn btn-primary" id = "add_round_btn">Add New Round </button>
             </div>
             <div>
-             
                 <button class="btn btn-primary" id = "submit_round_btn" style="display: none;"> Save Round </button>
             </div>
-            <p></p>
-
         </form>
     </div>
     <script>
@@ -95,7 +99,6 @@
         let num_teams_input = document.querySelector("input[name='num_teams']");
         let num_teams = parseInt(num_teams_input.value, 10);
         let num_matches = num_teams / 2;
-        console.log("first breakpoint");
         let teamInputs = document.querySelectorAll("input[class='team_names']");
         teamNames = [];
         teamInputs.forEach(function(input) {
@@ -106,7 +109,18 @@
             teamNames.push(team);
         });
 
-        console.log("second breakpoint");
+        let scorecardLinks = document.querySelectorAll("button[class='btn btn-link scorecard-link']");
+        console.log(scorecardLinks);
+        console.log(scorecardLinks.length);
+        console.log("testing")
+        scorecardLinks.forEach(function(link) {
+            link.addEventListener("click", function(event) {
+                event.preventDefault();
+                let form = link.closest("form");
+                form.submit();
+            });
+        });
+      
 
         addRoundButton.addEventListener("click", function(event) {
             event.preventDefault();
@@ -209,5 +223,6 @@
         });
        
     </script>
+   
 {% endblock %}
 
