@@ -1,0 +1,96 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Scorecard
+{% endblock %}
+
+{% block main %}
+    <h1>Scorecard</h1>
+    <div class="mb-3">
+        <p><b>Event Name:</b> {{ event_name }}</p>
+        <p><b>Course:</b> {{ course_display_name }}</p>
+        <p><b>Round Number:</b> {{ round_number }}</p>
+        <p><b>Match Number:</b> {{ match_number }}</p>
+    </div>
+
+    <table class="table table-hover table-striped" id="scorecard_table">
+        <thead id="scorecard_header">
+            <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th colspan="3">{{ team_data.team_a_name }}</th>
+                <th colspan="3">{{ team_data.team_b_name }}</th>
+            </tr>
+            <tr>
+                <th>#</th>
+                <th>Par</th>
+                <th>Hcp</th>
+                <th>{{ team_data.team_a_players[0].player_name }}</th>
+                <th>{{ team_data.team_a_players[1].player_name }}</th>
+                <th>Net Best Ball</th>
+                <th>{{ team_data.team_b_players[0].player_name }}</th>
+                <th>{{ team_data.team_b_players[1].player_name }}</th>
+                <th>Net Best Ball</th>
+            </tr>
+            <tr>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th>Edit</th>
+                <th>Edit</th>
+                <th></th>
+                <th>Edit</th>
+                <th>Edit</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="scorecard_body">
+            {% for hole in holes %}
+                <tr>
+                    <td>{{ hole.hole_number }}</td>
+                    <td>{{ hole.par }}</td>
+                    <td>{{ hole.hole_hcp }}</td>
+                    <td>{{ hole.team_a_scores[0] }}</td>
+                    <td>{{ hole.team_a_scores[1] }}</td>
+                    <td>##</td>
+                    <td>{{ hole.team_b_scores[0] }}</td>
+                    <td>{{ hole.team_b_scores[1] }}</td>
+                    <td>##</td>
+                </tr>
+            {% endfor %}
+            <tr>
+                <td>F9</td>
+                <td>sPar</td>
+                <td></td>
+                <td>PA1T</td>
+                <td>PA2T</td>
+                <td>NetBB</td>
+                <td>PB1T</td>
+                <td>PB2T</td>
+                <td>NetBB</td>
+            </tr>
+            <tr>
+                <td>B9</td>
+                <td>sPar</td>
+                <td></td>
+                <td>PA1T</td>
+                <td>PA2T</td>
+                <td>NetBB</td>
+                <td>PB1T</td>
+                <td>PB2T</td>
+                <td>NetBB</td>
+            </tr>
+            <tr>
+                <td>Tot</td>
+                <td>sPar</td>
+                <td></td>
+                <td>PA1T</td>
+                <td>PA2T</td>
+                <td>NetBb</td>
+                <td>PB1T</td>
+                <td>PB2T</td>
+                <td>NetBb</td>
+            </tr>
+    </table>
+{% endblock %}

@@ -55,6 +55,21 @@ td span {
     margin-right: 5px;
 }
 
+#scorecard_table {
+    border-spacing: 0;
+}
+#scorecard_header {
+
+    font-size: small;
+    border: 1px solid #bbbbbb;
+}
+
+#scorecard_body {
+
+    font-size: smaller;
+    border: 1px solid #bbbbbb;
+}
+
 @media (max-width: 700px) {
     td span {
         display: block;

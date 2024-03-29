@@ -612,4 +612,68 @@ def get_courses():
 @app.route('/scorecard', methods=['GET', 'POST'])
 def scorecard():
 
-    return apology("To Do Scorecard")
+    if request.method == "POST":
+        
+        # Get round number
+        round_number = request.form.get("round_number")
+        
+        # Get match number
+        match_number = request.form.get("match_number")
+        
+        # Error check for round and match number
+        if not round_number or not match_number:
+            return apology("round or match number not sent")
+        
+        # Get round id and match id 
+        round_id = db.execute("SELECT id FROM rounds WHERE event_id = ? AND round_number = ?", 
+            session["event_id"], round_number)[0]["id"]
+        match_id = db.execute("SELECT id FROM matches WHERE round_id = ? AND match_number = ?", 
+            round_id, match_number)[0]["id"]
+        
+        # Get event name
+        event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
+        
+        # Get course id and display name
+        course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
+        course_name = db.execute("SELECT name FROM course_tee WHERE id = ?", course_id)[0]["name"]
+        course_tee = db.execute("SELECT teebox FROM course_tee WHERE id = ?", course_id)[0]["teebox"]
+        course_display_name = course_name + " - " + course_tee + " Tees"
+        
+        # Get team and player names
+        team_a_id = db.execute("SELECT team_a_id FROM matches WHERE id = ?", match_id)[0]["team_a_id"]
+        team_b_id = db.execute("SELECT team_b_id FROM matches WHERE id = ?", match_id)[0]["team_b_id"]
+        team_a_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_a_id)[0]["team_name"]
+        team_b_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_b_id)[0]["team_name"]
+        team_a_players = db.execute("SELECT player_name FROM players WHERE id IN " +
+            "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_a_id)
+        team_b_players = db.execute("SELECT player_name FROM players WHERE id IN " +
+            "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_b_id)
+        team_data = {"team_a_name": team_a_name, "team_a_players": team_a_players, "team_b_name": team_b_name, "team_b_players": team_b_players}
+        
+        # Get course holes
+        holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course_id)
+        # For each hole in holes, get the score for each player in team a and team b
+        for hole in holes:
+            hole["team_a_scores"] = []
+            hole["team_b_scores"] = []
+            for player in team_a_players:
+                player_id = db.execute("SELECT id FROM players WHERE player_name = ?", player["player_name"])[0]["id"]
+                score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                    player_id, match_id, hole["hole_number"])
+                if score:
+                    hole["team_a_scores"].append(score[0]["score"])
+                else:
+                    hole["team_a_scores"].append("-")
+            for player in team_b_players:
+                player_id = db.execute("SELECT id FROM players WHERE player_name = ?", player["player_name"])[0]["id"]
+                score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                    player_id, match_id, hole["hole_number"])
+                if score:
+                    hole["team_b_scores"].append(score[0]["score"])
+                else:
+                    hole["team_b_scores"].append("-")
+        
+        return render_template("scorecard.html", event_name=event_name, course_display_name=course_display_name,
+            round_number=round_number, match_number=match_number, holes=holes, team_data=team_data)
+    else:
+        return redirect("/event_structure")
