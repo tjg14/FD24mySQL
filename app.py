@@ -629,7 +629,8 @@ def scorecard():
             session["event_id"], round_number)[0]["id"]
         match_id = db.execute("SELECT id FROM matches WHERE round_id = ? AND match_number = ?", 
             round_id, match_number)[0]["id"]
-        
+        match_data = {"match_number": match_number, "match_id": match_id}
+
         # Get event name
         event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
         
@@ -644,9 +645,9 @@ def scorecard():
         team_b_id = db.execute("SELECT team_b_id FROM matches WHERE id = ?", match_id)[0]["team_b_id"]
         team_a_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_a_id)[0]["team_name"]
         team_b_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_b_id)[0]["team_name"]
-        team_a_players = db.execute("SELECT player_name FROM players WHERE id IN " +
+        team_a_players = db.execute("SELECT * FROM players WHERE id IN " +
             "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_a_id)
-        team_b_players = db.execute("SELECT player_name FROM players WHERE id IN " +
+        team_b_players = db.execute("SELECT * FROM players WHERE id IN " +
             "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_b_id)
         team_data = {"team_a_name": team_a_name, "team_a_players": team_a_players, "team_b_name": team_b_name, "team_b_players": team_b_players}
         
@@ -674,6 +675,28 @@ def scorecard():
                     hole["team_b_scores"].append("-")
         
         return render_template("scorecard.html", event_name=event_name, course_display_name=course_display_name,
-            round_number=round_number, match_number=match_number, holes=holes, team_data=team_data)
+            round_number=round_number, match_data=match_data, holes=holes, team_data=team_data)
+    else:
+        return redirect("/event_structure")
+    
+@app.route('/scorecard_edit', methods=['GET', 'POST'])
+def scorecard_edit():
+ 
+    if request.method == "POST":
+
+        # Get match id and player id
+        match_id = request.form.get("match_id")
+        player_id = request.form.get("player_id")
+
+        # Get course id and display name
+        course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
+        course_name = db.execute("SELECT name FROM course_tee WHERE id = ?", course_id)[0]["name"]
+        course_tee = db.execute("SELECT teebox FROM course_tee WHERE id = ?", course_id)[0]["teebox"]
+        course_display_name = course_name + " - " + course_tee + " Tees"
+
+        # Get course holes
+        holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course_id)
+        
+        return render_template("scorecard_edit.html", holes=holes, course_display_name=course_display_name)
     else:
         return redirect("/event_structure")

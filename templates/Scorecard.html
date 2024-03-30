@@ -10,7 +10,7 @@
         <p><b>Event Name:</b> {{ event_name }}</p>
         <p><b>Course:</b> {{ course_display_name }}</p>
         <p><b>Round Number:</b> {{ round_number }}</p>
-        <p><b>Match Number:</b> {{ match_number }}</p>
+        <p><b>Match Number:</b> {{ match_data.match_number }}</p>
     </div>
 
     <table class="table table-hover table-striped" id="scorecard_table">
@@ -37,11 +37,35 @@
                 <th></th>
                 <th></th>
                 <th></th>
-                <th>Edit</th>
-                <th>Edit</th>
+                <th>
+                    <form action="/scorecard_edit" method="post">
+                        <input type="hidden" name="player_id" value="{{ team_data.team_a_players[0].id }}">
+                        <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
+                        <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">Edit</button>
+                    </form>
+                </th>
+                <th>
+                    <form action="/scorecard_edit" method="post">
+                        <input type="hidden" name="player_id" value="{{ team_data.team_a_players[1].id }}">
+                        <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
+                        <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">Edit</button>
+                    </form>
+                </th>
                 <th></th>
-                <th>Edit</th>
-                <th>Edit</th>
+                <th>
+                    <form action="/scorecard_edit" method="post">
+                        <input type="hidden" name="player_id" value="{{ team_data.team_b_players[0].id}}">
+                        <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
+                        <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">Edit</button>
+                    </form>
+                </th>
+                <th>
+                    <form action="/scorecard_edit" method="post">
+                        <input type="hidden" name="player_id" value="{{ team_data.team_b_players[1].id }}">
+                        <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
+                        <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">Edit</button>
+                    </form>
+                </th>
                 <th></th>
             </tr>
         </thead>
