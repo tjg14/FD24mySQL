@@ -50,7 +50,8 @@ def index():
         # Remove any specific event in session
         if session.get("event_id") is not None:
             session.pop("event_id", None)
-        
+       
+
         # Get groupname via session group_id
         groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
         
@@ -622,62 +623,75 @@ def scorecard():
         
         # Error check for round and match number
         if not round_number or not match_number:
-            return apology("round or match number not sent")
+            return apology("round or match number not sent in POST request")
         
-        # Get round id and match id 
-        round_id = db.execute("SELECT id FROM rounds WHERE event_id = ? AND round_number = ?", 
-            session["event_id"], round_number)[0]["id"]
-        match_id = db.execute("SELECT id FROM matches WHERE round_id = ? AND match_number = ?", 
-            round_id, match_number)[0]["id"]
-        match_data = {"match_number": match_number, "match_id": match_id}
-
-        # Get event name
-        event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
-        
-        # Get course id and display name
-        course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
-        course_name = db.execute("SELECT name FROM course_tee WHERE id = ?", course_id)[0]["name"]
-        course_tee = db.execute("SELECT teebox FROM course_tee WHERE id = ?", course_id)[0]["teebox"]
-        course_display_name = course_name + " - " + course_tee + " Tees"
-        
-        # Get team and player names
-        team_a_id = db.execute("SELECT team_a_id FROM matches WHERE id = ?", match_id)[0]["team_a_id"]
-        team_b_id = db.execute("SELECT team_b_id FROM matches WHERE id = ?", match_id)[0]["team_b_id"]
-        team_a_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_a_id)[0]["team_name"]
-        team_b_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_b_id)[0]["team_name"]
-        team_a_players = db.execute("SELECT * FROM players WHERE id IN " +
-            "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_a_id)
-        team_b_players = db.execute("SELECT * FROM players WHERE id IN " +
-            "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_b_id)
-        team_data = {"team_a_name": team_a_name, "team_a_players": team_a_players, "team_b_name": team_b_name, "team_b_players": team_b_players}
-        
-        # Get course holes
-        holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course_id)
-        # For each hole in holes, get the score for each player in team a and team b
-        for hole in holes:
-            hole["team_a_scores"] = []
-            hole["team_b_scores"] = []
-            for player in team_a_players:
-                player_id = db.execute("SELECT id FROM players WHERE player_name = ?", player["player_name"])[0]["id"]
-                score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-                    player_id, match_id, hole["hole_number"])
-                if score:
-                    hole["team_a_scores"].append(score[0]["score"])
-                else:
-                    hole["team_a_scores"].append("-")
-            for player in team_b_players:
-                player_id = db.execute("SELECT id FROM players WHERE player_name = ?", player["player_name"])[0]["id"]
-                score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-                    player_id, match_id, hole["hole_number"])
-                if score:
-                    hole["team_b_scores"].append(score[0]["score"])
-                else:
-                    hole["team_b_scores"].append("-")
-        
-        return render_template("scorecard.html", event_name=event_name, course_display_name=course_display_name,
-            round_number=round_number, match_data=match_data, holes=holes, team_data=team_data)
+        # Clear previous and add round number and match number to session
+        session.pop("round", None)
+        session.pop("match", None)
+        session["round_number"] = round_number
+        session["match_number"] = match_number
     else:
-        return redirect("/event_structure")
+        # Get round number and match number from session
+        round_number = session["round_number"]
+        match_number = session["match_number"]
+
+        # If round number or match number not in session, return apology
+        if not round_number or not match_number:
+            redirect("/event_structure")
+
+    # Get round id and match id 
+    round_id = db.execute("SELECT id FROM rounds WHERE event_id = ? AND round_number = ?", 
+        session["event_id"], round_number)[0]["id"]
+    match_id = db.execute("SELECT id FROM matches WHERE round_id = ? AND match_number = ?", 
+        round_id, match_number)[0]["id"]
+    match_data = {"match_number": match_number, "match_id": match_id}
+
+    # Get event name
+    event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
+    
+    # Get course id and display name
+    course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
+    course_name = db.execute("SELECT name FROM course_tee WHERE id = ?", course_id)[0]["name"]
+    course_tee = db.execute("SELECT teebox FROM course_tee WHERE id = ?", course_id)[0]["teebox"]
+    course_display_name = course_name + " - " + course_tee + " Tees"
+    
+    # Get team and player names
+    team_a_id = db.execute("SELECT team_a_id FROM matches WHERE id = ?", match_id)[0]["team_a_id"]
+    team_b_id = db.execute("SELECT team_b_id FROM matches WHERE id = ?", match_id)[0]["team_b_id"]
+    team_a_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_a_id)[0]["team_name"]
+    team_b_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_b_id)[0]["team_name"]
+    team_a_players = db.execute("SELECT * FROM players WHERE id IN " +
+        "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_a_id)
+    team_b_players = db.execute("SELECT * FROM players WHERE id IN " +
+        "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_b_id)
+    team_data = {"team_a_name": team_a_name, "team_a_players": team_a_players, "team_b_name": team_b_name, "team_b_players": team_b_players}
+    
+    # Get course holes
+    holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course_id)
+    # For each hole in holes, get the score for each player in team a and team b
+    for hole in holes:
+        hole["team_a_scores"] = []
+        hole["team_b_scores"] = []
+        for player in team_a_players:
+            player_id = db.execute("SELECT id FROM players WHERE player_name = ?", player["player_name"])[0]["id"]
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player_id, match_id, hole["hole_number"])
+            if score:
+                hole["team_a_scores"].append(score[0]["score"])
+            else:
+                hole["team_a_scores"].append("-")
+        for player in team_b_players:
+            player_id = db.execute("SELECT id FROM players WHERE player_name = ?", player["player_name"])[0]["id"]
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player_id, match_id, hole["hole_number"])
+            if score:
+                hole["team_b_scores"].append(score[0]["score"])
+            else:
+                hole["team_b_scores"].append("-")
+    
+    return render_template("scorecard.html", event_name=event_name, course_display_name=course_display_name,
+        round_number=round_number, match_data=match_data, holes=holes, team_data=team_data)
+    
     
 @app.route('/scorecard_edit', methods=['GET', 'POST'])
 def scorecard_edit():
@@ -696,7 +710,41 @@ def scorecard_edit():
 
         # Get course holes
         holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course_id)
+
+        # For each hole, append the score for the player_id if it exists, else leave blank
+        for hole in holes:
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player_id, match_id, hole["hole_number"])
+            if score:
+                hole["score"] = score[0]["score"]
+            else:
+                hole["score"] = None
+
+        return render_template("scorecard_edit.html", holes=holes, course_display_name=course_display_name, 
+            match_id=match_id, player_id=player_id)
+    else:
+        return redirect("/event_structure")
+
+@app.route('/scorecard_processing', methods=['GET', 'POST'])
+def scorecard_processing():
+ 
+    if request.method == "POST":
+            
+        # Get match id and player id and hcp
+        match_id = request.form.get("match_id")
+        player_id = request.form.get("player_id")
+
+        # Get course id
+        course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
+
+        # For each hole, get the score and update the scores table
+        for i in range(1, 19):
+            score = int(request.form.get("score_hole_" + str(i)))
+            if score and score > 0:
+                db.execute("INSERT INTO scores (match_id, match_hole_number, player_id, score) VALUES (?, ?, ?, ?)",
+                    match_id, i, player_id, score)
         
-        return render_template("scorecard_edit.html", holes=holes, course_display_name=course_display_name)
+        return redirect("/scorecard")
+
     else:
         return redirect("/event_structure")

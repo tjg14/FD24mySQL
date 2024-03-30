@@ -70,6 +70,17 @@ td span {
     border: 1px solid #bbbbbb;
 }
 
+.scorecard_cell {
+    width: 2em;
+    text-align: center;
+}
+
+.scorecard_cell::-webkit-inner-spin-button,
+.scorecard_cell::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 @media (max-width: 700px) {
     td span {
         display: block;

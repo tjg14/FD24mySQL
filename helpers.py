@@ -60,3 +60,8 @@ def event_selected(f):
 def usd(value):
     """Format value as USD."""
     return f"${value:,.2f}"
+
+# Function to remove round number and match number from session
+def remove_round_match():
+    session.pop("round", None)
+    session.pop("match", None)
