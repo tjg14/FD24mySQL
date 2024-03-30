@@ -75,11 +75,27 @@ td span {
     text-align: center;
 }
 
-.scorecard_cell::-webkit-inner-spin-button,
-.scorecard_cell::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+input[type="number"].scorecard_cell::-webkit-inner-spin-button,
+input[type="number"].scorecard_cell::-webkit-outer-spin-button {
+     -webkit-appearance: none;
+     margin: 0;
 }
+
+#scrollable-table-scorecard {
+    width: calc(100vw - 5px);
+    margin-left: auto;
+    margin-right: auto;
+    overflow: scroll;
+}
+
+#scrollable-table-scorecard .table thead th:first-child,
+#scrollable-table-scorecard .table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: white;
+    z-index: 1;
+}
+
 
 @media (max-width: 700px) {
     td span {

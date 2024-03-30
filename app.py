@@ -673,7 +673,8 @@ def scorecard():
         hole["team_a_scores"] = []
         hole["team_b_scores"] = []
         for player in team_a_players:
-            player_id = db.execute("SELECT id FROM players WHERE player_name = ?", player["player_name"])[0]["id"]
+            player_id = db.execute("SELECT id FROM players WHERE player_name = ? AND group_id = ?", player["player_name"],
+                session["group_id"])[0]["id"]
             score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
                 player_id, match_id, hole["hole_number"])
             if score:
@@ -681,13 +682,19 @@ def scorecard():
             else:
                 hole["team_a_scores"].append("-")
         for player in team_b_players:
-            player_id = db.execute("SELECT id FROM players WHERE player_name = ?", player["player_name"])[0]["id"]
+            player_id = db.execute("SELECT id FROM players WHERE player_name = ? AND group_id = ?", player["player_name"],
+                session["group_id"])[0]["id"]
             score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
                 player_id, match_id, hole["hole_number"])
             if score:
                 hole["team_b_scores"].append(score[0]["score"])
             else:
                 hole["team_b_scores"].append("-")
+    
+    # Calculate front 9, back 9, and 18 hole total score for each player on each team
+                
+                
+    
     
     return render_template("scorecard.html", event_name=event_name, course_display_name=course_display_name,
         round_number=round_number, match_data=match_data, holes=holes, team_data=team_data)
@@ -701,6 +708,7 @@ def scorecard_edit():
         # Get match id and player id
         match_id = request.form.get("match_id")
         player_id = request.form.get("player_id")
+        player_name = db.execute("SELECT player_name FROM players WHERE id = ?", player_id)[0]["player_name"]
 
         # Get course id and display name
         course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
@@ -721,7 +729,7 @@ def scorecard_edit():
                 hole["score"] = None
 
         return render_template("scorecard_edit.html", holes=holes, course_display_name=course_display_name, 
-            match_id=match_id, player_id=player_id)
+            match_id=match_id, player_id=player_id, player_name=player_name)
     else:
         return redirect("/event_structure")
 
@@ -737,12 +745,18 @@ def scorecard_processing():
         # Get course id
         course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
 
-        # For each hole, get the score and update the scores table
+        # For each hole, get the score and update the scores table, checking if score exits and updating if so
         for i in range(1, 19):
             score = int(request.form.get("score_hole_" + str(i)))
             if score and score > 0:
-                db.execute("INSERT INTO scores (match_id, match_hole_number, player_id, score) VALUES (?, ?, ?, ?)",
-                    match_id, i, player_id, score)
+                score_rows = db.execute("SELECT * FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                    player_id, match_id, i)
+                if score_rows:
+                    db.execute("UPDATE scores SET score = ? WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                        score, player_id, match_id, i)
+                else:   
+                    db.execute("INSERT INTO scores (match_id, match_hole_number, player_id, score) VALUES (?, ?, ?, ?)",
+                        match_id, i, player_id, score)
         
         return redirect("/scorecard")
 

@@ -7,51 +7,81 @@
 {% block main %}
     <h1>Scorecard Input</h1>
     
-    <form action="/scorecard_processing" method="post"></form>
-        
+    <form action="/scorecard_processing" method="post" id="scorecard_form">
         <div class="mb-3">
-            <p><b>Course:</b> {{ course_display_name }}</p>
+            <p>{{ course_display_name }}</p>
             <input type="hidden" name="match_id" value="{{ match_id }}">
             <input type="hidden" name="player_id" value="{{ player_id }}">
         </div>
-
-        <table class="table table-hover table-striped">
-            <thead>
-                <tr></tr>
-                    <th>Hole #</th>
-                    {% for hole in holes%}
-                        <th>{{ hole.hole_number }}</th>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <th>Par</th>
-                    {% for hole in holes %}
-                        <th>{{ hole.par }}</th>
-                    {% endfor %}
-                </tr>
-                <tr>
-                    <th>Hcp</th>
-                    {% for hole in holes %}
-                        <th>{{ hole.hole_hcp }}</th>
-                    {% endfor %}
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Player name</td>
-                    {% for hole in holes %}
-                        <td>
-                            <!-- Input cell for each hole with indentifying hole number -->
-                                <input autofocus class="scorecard_cell" type="number" step="1" name="score_hole_{{ hole.hole_number }}" value="{{ hole.score }}">
-                        </td>
-                    {% endfor %}
-                </tr>
-            </tbody>
-        </table>
-        <button class="btn btn-primary" type="submit">Submit Scorecard</button>
+        <div >
+            <table class="table" id="scrollable-table-scorecard">
+                <thead>
+                    <tr></tr>
+                        <th>Hole #</th>
+                        {% for hole in holes%}
+                            <th>{{ hole.hole_number }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <th>Par</th>
+                        {% for hole in holes %}
+                            <th>{{ hole.par }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <th>Hcp</th>
+                        {% for hole in holes %}
+                            <th>{{ hole.hole_hcp }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ player_name }}</td>
+                        {% for hole in holes %}
+                            <td>
+                                <!-- Input cell for each hole with indentifying hole number -->
+                                    <input autofocus class="scorecard_cell" type="number" step="1" name="score_hole_{{ hole.hole_number }}" value="{{ hole.score }}">
+                            </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <p id="F9"></p>
+            <p id="B9"></p>
+            <p id="Tot"></p>
+        </div>
+        <button class="btn btn-primary" type="submit" id="submit_btn">Submit Scorecard</button>
+        
     </form>
     <script>
+       // Create function to calculate front 9, back 9, and total scores and display them
+        function calculateScores() {
+            let scoreCells = document.querySelectorAll('.scorecard_cell');
+            let front9 = 0;
+            let back9 = 0;
+            let total = 0;
+            for (let i = 0; i < scoreCells.length; i++) {
+                let score = scoreCells[i].value.trim() !== "" ? parseInt(scoreCells[i].value) : 0;
+                if (!isNaN(score)) {
+                    if (i < 9) {
+                        front9 += score;
+                    } else if (i < 18) {
+                        back9 += score;
+                    }
+                    total += score;
+                }
+            }
+            document.getElementById('F9').innerText = `Front 9: ${front9}`;
+            document.getElementById('B9').innerText = `Back 9: ${back9}`;
+            document.getElementById('Tot').innerText = `Total: ${total}`;
+        }
+        
         // Add event listener to each input cell, if a number >1 is input, move focus to the next cell
         document.addEventListener('DOMContentLoaded', function() {
+            calculateScores();
             var cells = document.querySelectorAll('.scorecard_cell');
             cells.forEach(function(cell, index) {
                 cell.oninput = function() {
@@ -61,8 +91,19 @@
                             nextCell.focus();
                         }
                     }
+                    calculateScores();
                 }
             });
         });
+
+        // Add event listener for click to submit form fia post
+        let submitButton = document.getElementById("submit_btn");
+        submitButton.addEventListener("click", function(event) {
+            event.preventDefault();
+            let form = document.getElementById("scorecard_form");
+            form.submit();
+        });
+
     </script>
+
 {% endblock %}
