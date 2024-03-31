@@ -1,129 +1,97 @@
 # FD24
 
-Things to consider
-
-login as user first
-- navbar includes Register, Login
--   
-
-then login/join a group page?
--   navbar includes logout
-- page options create new group, or login in to group
--   show history of groups previously assocaited with you below login, if clicked link, take to you pre-filled login page
-    (Ie FD or Nick,pete,brendan to keep scores and events)
-
--Once logged in to group
--   left navbar includes group name, "event setup", right bar includes switch group, logout 
--   page shows list
-    - events & winners
-    - players 
-
-    - create new event button or nav 
-
-
-
-user-> trevor
-group-> FD
-event-> FD24
-course_tee -> fd black
-round -> 1
-match->a
-player->trevor
-team->LH
-hole->1
-
-
 
 CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    username TEXT NOT NULL,
-    hash TEXT NOT NULL
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(30) NOT NULL,
+    hash VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE groups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    groupname TEXT NOT NULL,
-    hash TEXT NOT NULL
+CREATE TABLE `groups` (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    groupname VARCHAR(50) NOT NULL,
+    hash VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE group_user_associations (
-    group_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES groups(id),
+    group_id INT NOT NULL,
+    user_id INT NOT NULL,
+    FOREIGN KEY (group_id) REFERENCES `groups`(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE course_tee (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    name TEXT NOT NULL,
-    teebox TEXT NOt NULL,
-    rating NUMERIC NOT NULL,
-    slope NUMERIC NOT NULL,
-    active INTEGER NOT NULL DEFAULT 1
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL,
+    teebox VARCHAR(10) NOT NULL,
+    rating DECIMAL(4, 1) NOT NULL,
+    slope DECIMAL(3, 0) NOT NULL,
+    active INT NOT NULL DEFAULT 1
 );
 
+
 CREATE TABLE holes (
-    course_id INTEGER NOT NULL,
-    hole_number INTEGER NOT NULL,
-    par INTEGER NOT NULL,
-    hole_hcp INTEGER NOT NULL,
+    course_id INT NOT NULL,
+    hole_number INT NOT NULL,
+    par INT NOT NULL,
+    hole_hcp INT NOT NULL,
     FOREIGN KEY (course_id) REFERENCES course_tee(id)
 );
 
 CREATE TABLE events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    event_name TEXT NOT NULL,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    event_name VARCHAR(50) NOT NULL,
     group_id INT NOT NULL,
-    date TEXT,
-    FOREIGN KEY (group_id) REFERENCES groups(id)
+    date DATE NOT NULL,
+    FOREIGN KEY (group_id) REFERENCES `groups`(id)
 );
 
 CREATE TABLE teams (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    team_name TEXT NOT NULL,
-    event_id INTEGER NOT NULL,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    team_name VARCHAR(50) NOT NULL,
+    event_id INT NOT NULL,
     FOREIGN KEY (event_id) REFERENCES events(id)
 );
 
 CREATE TABLE team_roster (
-    team_id INTEGER NOT NULL,
-    player_id INTEGER NOT NULL
+    team_id INT NOT NULL,
+    player_id INT NOT NULL
 );
 
 CREATE TABLE players (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    player_name TEXT NOT NULL,
-    group_id INTEGER NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES groups(id)
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    player_name VARCHAR(50) NOT NULL,
+    group_id INT NOT NULL,
+    FOREIGN KEY (group_id) REFERENCES `groups`(id)
 );
 
 CREATE TABLE handicaps (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    player_id INTEGER NOT NULL,
-    event_id INTEGER NOT NULL,
-    player_hcp NUMERIC NOT NULL,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    player_id INT NOT NULL,
+    event_id INT NOT NULL,
+    player_hcp DECIMAL(3, 1) NOT NULL,
     FOREIGN KEY (player_id) REFERENCES players(id),
     FOREIGN KEY (event_id) REFERENCES events(id)
 );
 
 CREATE TABLE rounds (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    round_number INTEGER NOT NULL,
-    round_name TEXT,
-    event_id INTEGER NOT NULL,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    round_number INT NOT NULL,
+    round_name VARCHAR(30),
+    event_id INT NOT NULL,
     FOREIGN KEY (event_id) REFERENCES events(id)
 );
 
 CREATE TABLE matches (
-    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    match_number INTEGER NOT NULL,
-    match_name TEXT,
-    match_starting_hole INTERGER NOT NULL DEFAULT 1,
-    round_id INTEGER NOT NULL,
-    course_id INTEGER NOT NULL,
-    team_a_id INTEGER NOT NULL,
-    team_b_id INTEGER NOT NULL,
-    status TEXT NOT NULL DEFAULT INCOMPLETE,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    match_number INT NOT NULL,
+    match_time TIME,
+    match_starting_hole INT NOT NULL DEFAULT 1,
+    round_id INT NOT NULL,
+    course_id INT NOT NULL,
+    team_a_id INT NOT NULL,
+    team_b_id INT NOT NULL,
+    status VARCHAR(15) NOT NULL DEFAULT 'INCOMPLETE',
     FOREIGN KEY (round_id) REFERENCES rounds(id),
     FOREIGN KEY (course_id) REFERENCES course_tee(id),
     FOREIGN KEY (team_a_id) REFERENCES teams(id),
@@ -131,11 +99,10 @@ CREATE TABLE matches (
 );
 
 CREATE TABLE scores (
-    match_id INTEGER NOT NULL,
-    match_hole_number INTEGER NOT NULL,
-    player_id INTEGER NOT NULL,
-    score INTEGER NOT NULL,
-    ESC_score INTEGER,
+    match_id INT NOT NULL,
+    match_hole_number INT NOT NULL,
+    player_id INT NOT NULL,
+    score INT NOT NULL,
     FOREIGN KEY (match_id) REFERENCES matches(id),
     FOREIGN KEY (player_id) REFERENCES players(id)
 );

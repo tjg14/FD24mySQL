@@ -22,7 +22,8 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Configure CS50 Library to use SQLite database
-db = SQL("sqlite:///FD2024.db")
+#db = SQL("sqlite:///FD2024.db")
+db = SQL("mysql://root:password123@localhost:3306/FD2024")
 
 
 @app.after_request
@@ -53,7 +54,7 @@ def index():
        
 
         # Get groupname via session group_id
-        groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
+        groupname = db.execute("SELECT groupname FROM `groups` WHERE id = ?", session["group_id"])[0]["groupname"]
         
         # Get events dictionary for group_id
         events = db.execute("SELECT * FROM events WHERE group_id = ?", session["group_id"])
@@ -132,10 +133,13 @@ def login():
 
         # Query users table in database for username
         rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
+        print(rows)
 
         # Ensure username exists and password is correct, else return apology
-        if len(rows) != 1 or not check_password_hash(rows[0]["hash"], request.form.get("password")):
-            return apology("invalid username and/or password", 400)
+        if len(rows) != 1 :
+            return apology("invalid username", 400)
+        if not check_password_hash(rows[0]["hash"], request.form.get("password")):
+            return apology("invalid password", 400)
 
         # Remember which user has logged in by storing user_id in session
         session["user_id"] = rows[0]["id"]
@@ -196,7 +200,7 @@ def group_login():
             return apology("must provide password", 400)
 
         # Query database for groupname
-        rows_groups = db.execute("SELECT * FROM groups WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
+        rows_groups = db.execute("SELECT * FROM `groups` WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
 
         # Ensure username exists and password is correct
         if len(rows_groups) != 1 or not check_password_hash(rows_groups[0]["hash"], request.form.get("password")):
@@ -230,7 +234,7 @@ def create_group():
             return apology("must provide group name and password", 400)
 
         # Query database for group name
-        rows = db.execute("SELECT * FROM groups WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
+        rows = db.execute("SELECT * FROM `groups` WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
 
         # Check if groupname already exists
         if len(rows) > 0:
@@ -241,7 +245,7 @@ def create_group():
             return apology("Passwords don't match", 400)
 
         # Register group into groups database
-        db.execute("INSERT INTO groups (groupname, hash) VALUES (?, ?)", request.form.get("groupname"), 
+        db.execute("INSERT INTO `groups` (groupname, hash) VALUES (?, ?)", request.form.get("groupname"), 
             generate_password_hash(request.form.get("password")))
 
         return redirect("/")
@@ -273,7 +277,7 @@ def players():
         return redirect("/players")
     
     else:
-        groupname = db.execute("SELECT groupname FROM groups WHERE id = ?", session["group_id"])[0]["groupname"]
+        groupname = db.execute("SELECT groupname FROM `groups` WHERE id = ?", session["group_id"])[0]["groupname"]
         players = db.execute("SELECT * FROM players WHERE group_id = ?", session["group_id"])
         for row in range(len(players)):
             try:
@@ -359,7 +363,7 @@ def create_event():
             return apology("Num Team must be integer")
        
        #Send back if pressed enter with 0 players or no event name
-        if not num_players or not event_name:
+        if not num_players or not event_name or not event_date:
             redirect("/create_event")
         
         #TODO confim event name doesnt exist in the group already
@@ -386,9 +390,10 @@ def create_event_continued():
 
         # Get event header details and error check
         event_name = request.form.get("event_name")
-        if not event_name:
-            return apology("no event name")
         event_date = request.form.get("event_date")
+        if not event_name or event_date:
+            return apology("no event name or event date")
+        
         num_teams = int(request.form.get("num_teams"))
         if num_teams < 2:
             return apology("must have at least 2 teams")
