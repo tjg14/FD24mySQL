@@ -83,38 +83,40 @@
                     <td>##</td>
                 </tr>
             {% endfor %}
+       
             <tr>
                 <td>F9</td>
-                <td>sPar</td>
+                <td>{{ total_par.front_9_par }}</td>
                 <td></td>
-                <td>PA1T</td>
-                <td>PA2T</td>
+                <td>{{ team_data.team_a_players[0].front_9_total }}</td>
+                <td>{{ team_data.team_a_players[1].front_9_total }}</td>
                 <td>NetBB</td>
-                <td>PB1T</td>
-                <td>PB2T</td>
+                <td>{{ team_data.team_b_players[0].front_9_total }}</td>
+                <td>{{ team_data.team_b_players[1].front_9_total }}</td>
                 <td>NetBB</td>
             </tr>
             <tr>
                 <td>B9</td>
-                <td>sPar</td>
+                <td>{{ total_par.back_9_par }}</td>
                 <td></td>
-                <td>PA1T</td>
-                <td>PA2T</td>
+                <td>{{ team_data.team_a_players[0].back_9_total }}</td>
+                <td>{{ team_data.team_a_players[1].back_9_total }}</td>
                 <td>NetBB</td>
-                <td>PB1T</td>
-                <td>PB2T</td>
+                <td>{{ team_data.team_b_players[0].back_9_total }}</td>
+                <td>{{ team_data.team_b_players[1].back_9_total }}</td>
                 <td>NetBB</td>
             </tr>
             <tr>
                 <td>Tot</td>
-                <td>sPar</td>
+                <td>{{ total_par.total_18_par }}</td>
                 <td></td>
-                <td>PA1T</td>
-                <td>PA2T</td>
+                <td>{{ team_data.team_a_players[0].total_18 }}</td>
+                <td>{{ team_data.team_a_players[1].total_18 }}</td>
                 <td>NetBb</td>
-                <td>PB1T</td>
-                <td>PB2T</td>
+                <td>{{ team_data.team_b_players[0].total_18 }}</td>
+                <td>{{ team_data.team_b_players[1].total_18 }}</td>
                 <td>NetBb</td>
             </tr>
+        </tbody>
     </table>
 {% endblock %}

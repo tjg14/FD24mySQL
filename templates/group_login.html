@@ -6,8 +6,6 @@
 
 {% block main %}
 
-    TODO: Add list of previously associated groups, with links to log in, avoid sign in
-
     <form action="/group_login" method="post">
         <div class="mb-3">
             <input autocomplete="off" autofocus class="form-control mx-auto w-auto" id="groupname" name="groupname" placeholder="Group Name" type="text">
@@ -17,4 +15,28 @@
         </div>
         <button class="btn btn-primary" type="submit">Enter Group</button>
     </form>
+
+    <br>
+    {% if group_associations %}
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Associated Groups</th>
+                </tr>
+            <tbody>
+                {% for group in group_associations %}
+                    <tr>
+                        <td>
+                            <form action="/group_login" method="post">
+                                <input type="hidden" name="group_id" value="{{ group.id }}">
+                                <input type="hidden" name="is_associated" value="yes">
+                                <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">{{ group.groupname }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+  
 {% endblock %}

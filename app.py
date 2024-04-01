@@ -192,35 +192,49 @@ def group_login():
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
 
-        # Ensure username was submitted
-        if not request.form.get("groupname"):
-            return apology("must provide groupname", 400)
+        if not request.form.get("is_associated"):
+            # Ensure groupname was submitted
+            if not request.form.get("groupname"):
+                return apology("must provide groupname", 400)
 
-        # Ensure password was submitted
-        elif not request.form.get("password"):
-            return apology("must provide password", 400)
+            # Ensure password was submitted
+            elif not request.form.get("password"):
+                return apology("must provide password", 400)
 
-        # Query database for groupname
-        rows_groups = db.execute("SELECT * FROM `groups` WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
+            # Query database for groupname
+            rows_groups = db.execute("SELECT * FROM `groups` WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
 
-        # Ensure username exists and password is correct
-        if len(rows_groups) != 1 or not check_password_hash(rows_groups[0]["hash"], request.form.get("password")):
-            return apology("invalid group name and/or password", 400)
+            # Ensure username exists and password is correct
+            if len(rows_groups) != 1 or not check_password_hash(rows_groups[0]["hash"], request.form.get("password")):
+                return apology("invalid group name and/or password", 400)
 
-        # Remember which user has logged in and enter into associations table if needed
-        session["group_id"] = rows_groups[0]["id"]
-        rows_associations = db.execute("SELECT * FROM group_user_associations WHERE user_id = ? AND group_id = ?", 
-            session["user_id"], session["group_id"])
-        if not len(rows_associations):
-            db.execute("INSERT INTO group_user_associations (group_id, user_id) VALUES(?, ?)", 
-                session["group_id"], session["user_id"])
+            # Remember which user has logged in and enter into associations table if needed
+            session["group_id"] = rows_groups[0]["id"]
+            rows_associations = db.execute("SELECT * FROM group_user_associations WHERE user_id = ? AND group_id = ?", 
+                session["user_id"], session["group_id"])
+            if not len(rows_associations):
+                db.execute("INSERT INTO group_user_associations (group_id, user_id) VALUES(?, ?)", 
+                    session["group_id"], session["user_id"])
+        elif request.form.get("is_associated") == "yes":
+            group_id = request.form.get("group_id")
+            # Confirm user is associated with group
+            rows_associations = db.execute("SELECT * FROM group_user_associations WHERE user_id = ? AND group_id = ?", 
+                session["user_id"], group_id)
+            if not len(rows_associations):
+                return redirect("/group_login")
+            # Add group id to session
+            session["group_id"] = group_id
 
         # Redirect to group homepage
         return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
-        return render_template("group_login.html")
+        # Get any previous groups ids and names associated with user
+        group_associations = db.execute("SELECT * FROM `groups` WHERE id IN " +
+            "(SELECT group_id FROM group_user_associations WHERE user_id = ?)", session["user_id"])
+
+        return render_template("group_login.html", group_associations=group_associations)
 
 
 @app.route("/create_group",  methods=["GET", "POST"])
@@ -674,7 +688,8 @@ def scorecard():
     
     # Get course holes
     holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course_id)
-    # For each hole in holes, get the score for each player in team a and team b
+    # For each hole in holes, get the score for each player in team a and team b, keep track of total par
+    total_par = {"front_9_par": 0, "back_9_par": 0, "total_18_par": 0}
     for hole in holes:
         hole["team_a_scores"] = []
         hole["team_b_scores"] = []
@@ -696,14 +711,47 @@ def scorecard():
                 hole["team_b_scores"].append(score[0]["score"])
             else:
                 hole["team_b_scores"].append("-")
-    
-    # Calculate front 9, back 9, and 18 hole total score for each player on each team
-                
-                
-    
+        # Sum par for front 9, back 9, and total 18 holes
+        if hole["hole_number"] < 10:
+            total_par["front_9_par"] += hole["par"]
+        else:
+            total_par["back_9_par"] += hole["par"]
+        total_par["total_18_par"] += hole["par"]
+
+
+    # Calculate player totals for front 9, back 9, and total 18 holes
+    for player in team_a_players:
+        player["front_9_total"] = 0
+        player["back_9_total"] = 0
+        player["total_18"] = 0
+        for i in range(1, 19):
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player["id"], match_id, i)
+            if score:
+                if i < 10:
+                    player["front_9_total"] += score[0]["score"]
+                else:
+                    player["back_9_total"] += score[0]["score"]
+                player["total_18"] += score[0]["score"]
+    for player in team_b_players:
+        player["front_9_total"] = 0
+        player["back_9_total"] = 0
+        player["total_18"] = 0
+        for i in range(1, 19):
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player["id"], match_id, i)
+            if score:
+                if i < 10:
+                    player["front_9_total"] += score[0]["score"]
+                else:
+                    player["back_9_total"] += score[0]["score"]
+                player["total_18"] += score[0]["score"]
+ 
+    # Collect team data for scorecard
+    team_data = {"team_a_name": team_a_name, "team_a_players": team_a_players, "team_b_name": team_b_name, "team_b_players": team_b_players}
     
     return render_template("scorecard.html", event_name=event_name, course_display_name=course_display_name,
-        round_number=round_number, match_data=match_data, holes=holes, team_data=team_data)
+        round_number=round_number, match_data=match_data, holes=holes, team_data=team_data, total_par=total_par)
     
     
 @app.route('/scorecard_edit', methods=['GET', 'POST'])
