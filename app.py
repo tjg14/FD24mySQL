@@ -23,7 +23,8 @@ Session(app)
 
 # Configure CS50 Library to use SQLite database
 #db = SQL("sqlite:///FD2024.db")
-db = SQL("mysql://root:password123@localhost:3306/FD2024")
+#db = SQL("mysql://root:password123@localhost:3306/FD2024")
+db = SQL("mysql://root:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024")
 
 
 @app.after_request
