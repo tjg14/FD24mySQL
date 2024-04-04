@@ -5,7 +5,7 @@ CREATE TABLE users (
     hash VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE `groups` (
+CREATE TABLE golf_groups (
     id INT PRIMARY KEY AUTO_INCREMENT,
     groupname VARCHAR(50) NOT NULL,
     hash VARCHAR(255) NOT NULL
@@ -14,7 +14,7 @@ CREATE TABLE `groups` (
 CREATE TABLE group_user_associations (
     group_id INT NOT NULL,
     user_id INT NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES `groups`(id),
+    FOREIGN KEY (group_id) REFERENCES golf_groups(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
@@ -40,7 +40,7 @@ CREATE TABLE events (
     event_name VARCHAR(50) NOT NULL,
     group_id INT NOT NULL,
     date DATE NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES `groups`(id)
+    FOREIGN KEY (group_id) REFERENCES golf_groups(id)
 );
 
 CREATE TABLE teams (
@@ -52,14 +52,18 @@ CREATE TABLE teams (
 
 CREATE TABLE team_roster (
     team_id INT NOT NULL,
-    player_id INT NOT NULL
+    player_id INT NOT NULL,
+    FOREIGN KEY (team_id) REFERENCES teams(id),
+    FOREIGN KEY (player_id) REFERENCES players(id)
 );
+
+TO UPDATE ROSTER FOREIGN KEYSSSSs
 
 CREATE TABLE players (
     id INT PRIMARY KEY AUTO_INCREMENT,
     player_name VARCHAR(50) NOT NULL,
     group_id INT NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES `groups`(id)
+    FOREIGN KEY (group_id) REFERENCES golf_groups(id)
 );
 
 CREATE TABLE handicaps (
@@ -100,7 +104,6 @@ CREATE TABLE scores (
     match_hole_number INT NOT NULL,
     player_id INT NOT NULL,
     score INT NOT NULL,
-    ESC_score INT,
     FOREIGN KEY (match_id) REFERENCES matches(id),
     FOREIGN KEY (player_id) REFERENCES players(id)
 );
