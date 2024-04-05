@@ -26,21 +26,21 @@ Session(app)
 
 # Confirgure database connection locally
 
-#SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
-#     username="root",
-#     password="password123",
-#     hostname="localhost",
-#     databasename="FD2024",
-# )
+SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
+    username="root",
+    password="password123",
+    hostname="localhost",
+    databasename="FD2024",
+)
 
 
 # Confirgure database connection for pythonanywhere
-SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
-    username="tjg14",
-    password="TJGfd2024",
-    hostname="tjg14.mysql.pythonanywhere-services.com",
-    databasename="tjg14$FD2024",
-)
+# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
+#     username="tjg14",
+#     password="TJGfd2024",
+#     hostname="tjg14.mysql.pythonanywhere-services.com",
+#     databasename="tjg14$FD2024",
+# )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
@@ -58,7 +58,7 @@ class User(db.Model):
     username = db.Column(db.String(30), nullable=False)
     hash = db.Column(db.String(255), nullable=False)
 
-class Group(db.Model):
+class GolfGroup(db.Model):
     __tablename__ = 'golf_groups'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -68,7 +68,7 @@ class Group(db.Model):
 class GroupUserAssociation(db.Model):
     __tablename__ = 'group_user_associations'
 
-    group_id = db.Column(db.Integer, db.ForeignKey("`groups`.id"), primary_key=True, nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey("golf_groups.id"), primary_key=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True, nullable=False)
 
 class Player(db.Model):
@@ -76,14 +76,14 @@ class Player(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     player_name = db.Column(db.String(50), nullable=False)
-    group_id = db.Column(db.Integer, db.ForeignKey("players.id"), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey("golf_groups.id"), nullable=False)
 
 class Event(db.Model):
     __tablename__ = 'events'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     event_name = db.Column(db.String(50), nullable=False)
-    group_id = db.Column(db.Integer, db.ForeignKey("`groups`.id"), nullable=False)
+    group_id = db.Column(db.Integer, db.ForeignKey("golf_groups.id"), nullable=False)
     date = db.Column(db.Date, nullable=False)
 
 class Team(db.Model):
@@ -189,7 +189,7 @@ def index():
 
         # Get groupname via session group_id
         try:
-            groupname = Group.query.filter_by(id=session["group_id"]).first().groupname
+            groupname = GolfGroup.query.filter_by(id=session["group_id"]).first().groupname
         except AttributeError:
             return apology("group not found")
         
@@ -229,36 +229,38 @@ def index():
 # USE CONTROL K + C TO COMMENT OUT BLOCKS OF CODE
 # USE CONTROL K + U TO UNCOMMENT BLOCKS OF CODE
     
-# @app.route("/register", methods=["GET", "POST"])
-# def register():
-#     #"""Register new user"""
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    #"""Register new user"""
 
-#     if request.method == "POST":
+    if request.method == "POST":
 
-#         # Ensure all fields not blank
-#         if not request.form.get("username") or not request.form.get("password") or not request.form.get("confirmation"):
-#             return apology("must provide username and password", 400)
+        # Ensure all fields not blank
+        if not request.form.get("username") or not request.form.get("password") or not request.form.get("confirmation"):
+            return apology("must provide username and password", 400)
 
-#         # Query users table in database for username
-#         rows = db.execute("SELECT * FROM users WHERE username = ?", request.form.get("username"))
+        # Query users table in database for username
+        rows = User.query.filter_by(username=request.form.get("username")).all()
 
-#         # Check if username already exists in users table, if yes, return apology
-#         if len(rows) > 0:
-#             return apology("Username already exists", 400)
+        # Check if username already exists in users table, if yes, return apology
+        if len(rows) > 0:
+            return apology("Username already exists", 400)
 
-#         # Check if password matches confirmation, else return apology
-#         if request.form.get("password") != request.form.get("confirmation"):
-#             return apology("Passwords don't match", 400)
+        # Check if password matches confirmation, else return apology
+        if request.form.get("password") != request.form.get("confirmation"):
+            return apology("Passwords don't match", 400)
 
-#         # Register new user into users database along with hash of their password
-#         db.execute("INSERT INTO users (username, hash) VALUES (?, ?)", request.form.get("username"), 
-#             generate_password_hash(request.form.get("password")))
+        # Register new user into users database along with hash of their password
+        new_user = User(username=request.form.get("username"), 
+            hash=generate_password_hash(request.form.get("password")))
+        db.session.add(new_user)
+        db.session.commit()
 
-#         # Redirect user to home page
-#         return redirect("/")
+        # Redirect user to home page
+        return redirect("/")
 
-#     else:
-#         return render_template("register.html")
+    else:
+        return render_template("register.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -304,7 +306,7 @@ def login():
 def logout():
     """Log user out"""
 
-    # Forget any user_id in session
+    # Forget any data in session
     session.clear()
 
     # Redirect user to login form
@@ -348,7 +350,7 @@ def group_login():
                 return apology("must provide password", 400)
 
             # Query database for groupname
-            rows_groups = Group.query.filter(func.lower(Group.groupname) == request.form.get("groupname").lower()).all()
+            rows_groups = GolfGroup.query.filter(func.lower(GolfGroup.groupname) == request.form.get("groupname").lower()).all()
 
             # Ensure username exists and password is correct
             if len(rows_groups) != 1 or not check_password_hash(rows_groups[0].hash, request.form.get("password")):
@@ -376,8 +378,8 @@ def group_login():
     # User reached route via GET (as by clicking a link or via redirect)
     else:
         # Get any previous groups ids and names associated with user
-        group_associations = Group.query.filter(
-            Group.id.in_(
+        group_associations = GolfGroup.query.filter(
+            GolfGroup.id.in_(
                 db.session.query(GroupUserAssociation.group_id).filter(GroupUserAssociation.user_id == session["user_id"])
             )
         ).all()
@@ -385,163 +387,183 @@ def group_login():
         return render_template("group_login.html", group_associations=group_associations)
 
 
-# @app.route("/create_group",  methods=["GET", "POST"])
-# @login_required
-# def create_group():
-#     """xxxx"""
+@app.route("/create_group",  methods=["GET", "POST"])
+@login_required
+def create_group():
+    """ Create new group """
 
-#     if request.method == "POST":
+    if request.method == "POST":
 
-#         # Ensure all fields not blank
-#         if not request.form.get("groupname") or not request.form.get("password") or not request.form.get("confirmation"):
-#             return apology("must provide group name and password", 400)
+        # Ensure all fields not blank
+        if not request.form.get("groupname") or not request.form.get("password") or not request.form.get("confirmation"):
+            return apology("must provide group name and password", 400)
 
-#         # Query database for group name
-#         rows = db.execute("SELECT * FROM `groups` WHERE LOWER(groupname) = ?", request.form.get("groupname").lower())
+        # Query database for group name
+        rows = GolfGroup.query.filter(func.lower(GolfGroup.groupname) == request.form.get("groupname").lower()).all()
 
-#         # Check if groupname already exists
-#         if len(rows) > 0:
-#             return apology("Group name already exists", 400)
+        # Check if groupname already exists
+        if len(rows) > 0:
+            return apology("Group name already exists", 400)
 
-#         # Check if password matches confirmation
-#         if request.form.get("password") != request.form.get("confirmation"):
-#             return apology("Passwords don't match", 400)
+        # Check if password matches confirmation
+        if request.form.get("password") != request.form.get("confirmation"):
+            return apology("Passwords don't match", 400)
 
-#         # Register group into groups database
-#         db.execute("INSERT INTO `groups` (groupname, hash) VALUES (?, ?)", request.form.get("groupname"), 
-#             generate_password_hash(request.form.get("password")))
+        # Register group into groups database
+        db.execute("INSERT INTO `groups` (groupname, hash) VALUES (?, ?)", request.form.get("groupname"), 
+            generate_password_hash(request.form.get("password")))
 
-#         return redirect("/")
+        new_group = GolfGroup(groupname=request.form.get("groupname"), 
+            hash=generate_password_hash(request.form.get("password"))) 
+        db.session.add(new_group)
+        db.session.commit()
 
-#     else:
-#         return render_template("create_group.html")
+        return redirect("/")
+
+    else:
+        return render_template("create_group.html")
     
 
-# @app.route("/players", methods=["GET", "POST"])
-# @login_required
-# @group_login_required
-# def players():
-#     """For now, render list of players, and allow add new player"""
+@app.route("/players", methods=["GET", "POST"])
+@login_required
+@group_login_required
+def players():
+    """For now, render list of players, and allow add new player"""
     
-#     if request.method == "POST":
+    if request.method == "POST":
 
-#         #Ensure player name is not blank
-#         player_name = request.form.get("player_name")
-#         if not player_name:
-#             return apology("must input player name", 400)
+        #Ensure player name is not blank
+        player_name = request.form.get("player_name")
+        if not player_name:
+            return apology("must input player name", 400)
 
-#         #Ensure player name doesn't exist within gurrent group
-#         player_rows = db.execute("SELECT * FROM players WHERE group_id = ? AND player_name =?", session["group_id"], player_name)
-#         if len(player_rows):
-#             return apology("player name already in group", 400)
+        #Ensure player name doesn't exist within gurrent group
+        player_rows = Player.query.filter_by(group_id=session["group_id"], player_name=player_name).all()
+        if len(player_rows):
+            return apology("player name already in group", 400)
 
-#         #Insert player name into players table
-#         db.execute("INSERT INTO players (player_name, group_id) VALUES (?, ?)", player_name, session["group_id"])
-#         return redirect("/players")
+        #Insert player name into players table
+        new_player = Player(player_name=player_name, group_id=session["group_id"])
+        db.session.add(new_player)
+        db.session.commit()
+        
+        return redirect("/players")
     
-#     else:
-#         groupname = db.execute("SELECT groupname FROM `groups` WHERE id = ?", session["group_id"])[0]["groupname"]
-#         players = db.execute("SELECT * FROM players WHERE group_id = ?", session["group_id"])
-#         for row in range(len(players)):
-#             try:
-#                 players[row]["latest_hcp"] = db.execute("SELECT * FROM handicaps WHERE player_id = ? ORDER BY id DESC LIMIT 1", 
-#                     players[row]["id"])[0]["player_hcp"]
-#             except:
-#                 players[row]["latest_hcp"] = None
-            
-#         return render_template("players.html", groupname=groupname, players=players, num_players=len(players))
+    else:
+        groupname = GolfGroup.query.filter_by(id=session["group_id"]).first().groupname
+        players = Player.query.filter_by(group_id=session["group_id"]).all()
+        players_with_hcp = []
+
+        for player in players:
+            player_dict = {**player.__dict__}
+            try:
+                latest_hcp = Handicap.query.filter_by(player_id=player.id).order_by(desc(Handicap.id)).first()
+                player_dict["latest_hcp"] = latest_hcp.player_hcp if latest_hcp else None
+            except:
+                player_dict["latest_hcp"] = None
+            players_with_hcp.append(player_dict)
+
+        return render_template("players.html", groupname=groupname, players=players_with_hcp, num_players=len(players))
     
 
-# @app.route("/edit_delete_player", methods=["GET", "POST"])
-# @login_required
-# @group_login_required
-# def edit_delete_player():
-#     """Edit or Delete Player"""
+@app.route("/edit_delete_player", methods=["GET", "POST"])
+@login_required
+@group_login_required
+def edit_delete_player():
+    """Edit or Delete Player"""
     
-#     if request.method == "POST":
+    if request.method == "POST":
 
-#         #Ensure player name or edit / delete is not blank
-#         player_name = request.form.get("player_name")
-#         edit_or_delete = request.form.get("edit_or_delete")
-#         if not player_name or not edit_or_delete:
-#             return apology("error player name or edit/delete option didnt go through", 400)
+        #Ensure player name or edit / delete is not blank
+        player_name = request.form.get("player_name")
+        edit_or_delete = request.form.get("edit_or_delete")
+        if not player_name or not edit_or_delete:
+            return apology("error player name or edit/delete option didnt go through", 400)
 
-#         #If delete, first check retrieve if player has scores
-#         player_id = db.execute("SELECT * FROM players WHERE group_id = ? AND player_name =?", session["group_id"], player_name)[0]["id"]
-#         player_scores = db.execute("SELECT * FROM scores WHERE player_id = ?", player_id)
-#         if len(player_scores):
-#             return apology("can't delete player with score history", 400)
+        #If delete, first check retrieve if player has scores
+        player_id = Player.query.filter_by(group_id=session["group_id"], player_name=player_name).first().id
+        player_scores = Scores.query.filter_by(player_id=player_id).all()
+        if len(player_scores):
+            return apology("can't delete player with score history", 400)
 
  
-#         return render_template("edit_delete_player.html",player_name=player_name, edit_or_delete=edit_or_delete)
+        return render_template("edit_delete_player.html",player_name=player_name, edit_or_delete=edit_or_delete)
     
-#     else:
-#         return redirect("/players")
+    else:
+        return redirect("/players")
     
-# @app.route("/edit_delete_player_complete", methods=["POST"])
-# @login_required
-# @group_login_required
-# def edit_delete_player_complete():
-#     """Complete the Edit or Delete Player"""
+@app.route("/edit_delete_player_complete", methods=["POST"])
+@login_required
+@group_login_required
+def edit_delete_player_complete():
+    """Complete the Edit or Delete Player"""
     
-#     if request.method == "POST":
+    if request.method == "POST":
 
-#         # Check if edit or delete request
-#         edit_or_delete = request.form.get("edit_or_delete")
-#         player_name = request.form.get("player_name")
+        # Check if edit or delete request
+        edit_or_delete = request.form.get("edit_or_delete")
+        player_name = request.form.get("player_name")
        
-#         if edit_or_delete == "edit":
-#             new_player_name = request.form.get("new_player_name")
-#             db.execute("UPDATE players SET player_name = ? WHERE player_name = ? AND group_id = ?",
-#                 new_player_name, player_name, session["group_id"])
-#         elif edit_or_delete == "delete":
-#             #Check again no scores
-#             player_id = db.execute("SELECT * FROM players WHERE group_id = ? AND player_name =?", session["group_id"], player_name)[0]["id"]
-#             player_scores = db.execute("SELECT * FROM scores WHERE player_id = ?", player_id)
-#             if len(player_scores):
-#                 return apology("can't delete player with score history", 400)
+        if edit_or_delete == "edit":
+            new_player_name = request.form.get("new_player_name")
+            player_to_update = Player.query.filter_by(player_name=player_name, group_id=session["group_id"]).first()
+            if player_to_update:
+                player_to_update.player_name = new_player_name
+                db.session.commit()
+        elif edit_or_delete == "delete":
+            #Check again no scores
+            player_id = Player.query.filter_by(group_id=session["group_id"], player_name=player_name).first().id
+            player_scores = Scores.query.filter_by(player_id=player_id).all()
+            if len(player_scores):
+                return apology("can't delete player with score history", 400)
             
-#             #Delete from players database
-#             db.execute("DELETE FROM players WHERE id = ?", player_id)
-#         else:
-#             return apology("no edit or delete request")
+            #Delete from players database
+            db.execute("DELETE FROM players WHERE id = ?", player_id)
+            player_to_delete = Player.query.filter_by(id=player_id).first()
+            db.session.delete(player_to_delete)
+            db.session.commit()
+        else:
+            return apology("no edit or delete request")
        
-#         return redirect("/players")
-#     else:
-#         return redirect("/players")
+        return redirect("/players")
+    else:
+        return redirect("/players")
 
 
-# @app.route("/create_event", methods=["GET", "POST"])
-# @login_required
-# @group_login_required
-# def create_event():
-#     """Create Event"""
+@app.route("/create_event", methods=["GET", "POST"])
+@login_required
+@group_login_required
+def create_event():
+    """Create Event"""
     
-#     if request.method == "POST":
-#         event_name = request.form.get("event_name")
-#         event_date = request.form.get("event_date")
-#         try:
-#             num_players = int(request.form.get("num_players"))
-#         except ValueError:
-#             return apology("Num Team must be integer")
+    if request.method == "POST":
+        event_name = request.form.get("event_name")
+        event_date = request.form.get("event_date")
+        try:
+            num_players = int(request.form.get("num_players"))
+        except ValueError:
+            return apology("Num Team must be integer")
        
-#        #Send back if pressed enter with 0 players or no event name
-#         if not num_players or not event_name or not event_date:
-#             redirect("/create_event")
+       #Send back if pressed enter with 0 players or no event name
+        if not num_players or not event_name or not event_date:
+            redirect("/create_event")
         
-#         #TODO confim event name doesnt exist in the group already
+        # Confim event name doesnt exist in the group already
+        event_rows = Event.query.filter_by(event_name=event_name, group_id=session["group_id"]).all()
+        if len(event_rows):
+            return apology("event name already exists in group")
         
-#         num_teams = math.ceil(num_players / 2)
-#         team_names = []
-#         for i in range(num_teams):
-#             team_names.append(request.form.get("team_name_" + str(i + 1)))
+        num_teams = math.ceil(num_players / 2)
+        team_names = []
+        for i in range(num_teams):
+            team_names.append(request.form.get("team_name_" + str(i + 1)))
         
-#         group_players = db.execute("SELECT player_name FROM players WHERE group_id = ?", session["group_id"])
+        group_players = Player.query.filter_by(group_id=session["group_id"]).all()
 
-#         return render_template("create_event_continued.html", event_name=event_name, event_date=event_date,
-#             num_players=num_players, num_teams=num_teams, team_names=team_names, group_players=group_players)
-#     else:
-#         return render_template("create_event.html")
+        return render_template("create_event_continued.html", event_name=event_name, event_date=event_date,
+            num_players=num_players, num_teams=num_teams, team_names=team_names, group_players=group_players)
+    else:
+        return render_template("create_event.html")
 
 # @app.route("/create_event_continued", methods=["GET", "POST"])
 # @login_required
