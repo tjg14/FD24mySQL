@@ -46,7 +46,7 @@
                                             <select class="form-control" name="player_a_team_{{ loop.index0 }}">
                                                 <option selected disabled>Player A</option>
                                                 {% for player in group_players %} 
-                                                    <option value="{{ player.player_name }}">{{ player.player_name }}</option>
+                                                    <option value="{{ player.id }}">{{ player.player_name }}</option>
                                                 {% endfor %}
                                             </select>
                                         </div>
@@ -61,7 +61,7 @@
                                             <select class="form-control" name="player_b_team_{{ loop.index0 }}">
                                                 <option selected disabled>Player B</option>
                                                 {% for player in group_players %} 
-                                                    <option value="{{ player.player_name }}">{{ player.player_name }}</option>
+                                                    <option value="{{ player.id }}">{{ player.player_name }}</option>
                                                 {% endfor %}
                                             </select>
                                         </div>

@@ -2,7 +2,7 @@ import os, math
 
 from cs50 import SQL
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func
+from sqlalchemy import func, desc
 from flask import Flask, jsonify, flash, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -285,7 +285,7 @@ def login():
         rows = User.query.filter_by(username=request.form.get("username")).all()
 
         # Ensure username exists and password is correct, else return apology
-        if len(rows) != 1 :
+        if len(rows) != 1:
             return apology("invalid username", 400)
         if not check_password_hash(rows[0].hash, request.form.get("password")):
             return apology("invalid password", 400)
@@ -319,10 +319,8 @@ def group():
     """Show options to join group or create group"""
 
     # Forget any group_id and event_id in session
-    if session.get("group_id") is not None:
-        session.pop("group_id", None)
-    if session.get("event_id") is not None:
-        session.pop("event_id", None)
+    session.pop("group_id", None)
+    session.pop("event_id", None)
 
     # Render group.html showing options to join group or create group
     return render_template("group.html")
@@ -334,27 +332,28 @@ def group_login():
     """Log into group"""
 
     # Forget any group_id
-    if session.get("group_id") is not None:
-        session.remove("group_id")
+    session.pop("group_id", None)
 
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
 
         if not request.form.get("is_associated"):
             # Ensure groupname was submitted
-            if not request.form.get("groupname"):
-                return apology("must provide groupname", 400)
+            groupname = request.form.get("groupname")
+            if not groupname:
+                return apology("Missing group name.", 400)
 
             # Ensure password was submitted
-            elif not request.form.get("password"):
-                return apology("must provide password", 400)
+            password = request.form.get("password")
+            if not password:
+                return apology("Missing password.", 400)
 
             # Query database for groupname
-            rows_groups = GolfGroup.query.filter(func.lower(GolfGroup.groupname) == request.form.get("groupname").lower()).all()
+            rows_groups = GolfGroup.query.filter(func.lower(GolfGroup.groupname) == groupname.lower()).all()
 
             # Ensure username exists and password is correct
-            if len(rows_groups) != 1 or not check_password_hash(rows_groups[0].hash, request.form.get("password")):
-                return apology("invalid group name and/or password", 400)
+            if len(rows_groups) != 1 or not check_password_hash(rows_groups[0].hash, password):
+                return apology("Invalid group name and/or password.", 400)
 
             # Remember which user has logged in and enter into associations table if needed
             session["group_id"] = rows_groups[0].id
@@ -394,27 +393,26 @@ def create_group():
 
     if request.method == "POST":
 
-        # Ensure all fields not blank
-        if not request.form.get("groupname") or not request.form.get("password") or not request.form.get("confirmation"):
-            return apology("must provide group name and password", 400)
+       # Ensure all fields not blank
+        groupname = request.form.get("groupname")
+        password = request.form.get("password")
+        confirmation = request.form.get("confirmation")
+        if not groupname or not password or not confirmation:
+            return apology("Missing group name, password, or confirmation.", 400)
 
         # Query database for group name
-        rows = GolfGroup.query.filter(func.lower(GolfGroup.groupname) == request.form.get("groupname").lower()).all()
+        rows = GolfGroup.query.filter(func.lower(GolfGroup.groupname) == groupname.lower()).all()
 
         # Check if groupname already exists
         if len(rows) > 0:
             return apology("Group name already exists", 400)
 
         # Check if password matches confirmation
-        if request.form.get("password") != request.form.get("confirmation"):
-            return apology("Passwords don't match", 400)
+        if password != confirmation:
+            return apology("Passwords don't match.", 400)
 
         # Register group into groups database
-        db.execute("INSERT INTO `groups` (groupname, hash) VALUES (?, ?)", request.form.get("groupname"), 
-            generate_password_hash(request.form.get("password")))
-
-        new_group = GolfGroup(groupname=request.form.get("groupname"), 
-            hash=generate_password_hash(request.form.get("password"))) 
+        new_group = GolfGroup(groupname=groupname, hash=generate_password_hash(password)) 
         db.session.add(new_group)
         db.session.commit()
 
@@ -435,12 +433,12 @@ def players():
         #Ensure player name is not blank
         player_name = request.form.get("player_name")
         if not player_name:
-            return apology("must input player name", 400)
+            return apology("Missing player name.", 400)
 
         #Ensure player name doesn't exist within gurrent group
         player_rows = Player.query.filter_by(group_id=session["group_id"], player_name=player_name).all()
         if len(player_rows):
-            return apology("player name already in group", 400)
+            return apology("Player name already in group", 400)
 
         #Insert player name into players table
         new_player = Player(player_name=player_name, group_id=session["group_id"])
@@ -450,20 +448,26 @@ def players():
         return redirect("/players")
     
     else:
-        groupname = GolfGroup.query.filter_by(id=session["group_id"]).first().groupname
+        group = GolfGroup.query.filter_by(id=session["group_id"]).first()
+        if not group:
+            return apology("Group not found.", 400)
         players = Player.query.filter_by(group_id=session["group_id"]).all()
         players_with_hcp = []
 
         for player in players:
-            player_dict = {**player.__dict__}
+            player_dict = {**player.__dict__}         
             try:
-                latest_hcp = Handicap.query.filter_by(player_id=player.id).order_by(desc(Handicap.id)).first()
+                latest_hcp = (db.session.query(Handicap)
+                    .join(Event, Handicap.event_id == Event.id)
+                    .filter(Handicap.player_id == player.id)
+                    .order_by(desc(Event.date))
+                    .first())
                 player_dict["latest_hcp"] = latest_hcp.player_hcp if latest_hcp else None
-            except:
+            except AttributeError:
                 player_dict["latest_hcp"] = None
             players_with_hcp.append(player_dict)
 
-        return render_template("players.html", groupname=groupname, players=players_with_hcp, num_players=len(players))
+        return render_template("players.html", groupname=group.groupname, players=players_with_hcp, num_players=len(players))
     
 
 @app.route("/edit_delete_player", methods=["GET", "POST"])
@@ -478,13 +482,15 @@ def edit_delete_player():
         player_name = request.form.get("player_name")
         edit_or_delete = request.form.get("edit_or_delete")
         if not player_name or not edit_or_delete:
-            return apology("error player name or edit/delete option didnt go through", 400)
+            return apology("Missing player name or edit/delete option.", 400)
 
-        #If delete, first check retrieve if player has scores
-        player_id = Player.query.filter_by(group_id=session["group_id"], player_name=player_name).first().id
-        player_scores = Scores.query.filter_by(player_id=player_id).all()
+       #If delete, first check retrieve if player has scores
+        player = Player.query.filter_by(group_id=session["group_id"], player_name=player_name).first()
+        if not player:
+            return apology("Player not found.", 400)
+        player_scores = Scores.query.filter_by(player_id=player.id).all()
         if len(player_scores):
-            return apology("can't delete player with score history", 400)
+            return apology("Can't delete player with score history.", 400)
 
  
         return render_template("edit_delete_player.html",player_name=player_name, edit_or_delete=edit_or_delete)
@@ -504,6 +510,9 @@ def edit_delete_player_complete():
         edit_or_delete = request.form.get("edit_or_delete")
         player_name = request.form.get("player_name")
        
+        if not edit_or_delete or not player_name:
+            return apology("Missing required fields.", 400)
+        
         if edit_or_delete == "edit":
             new_player_name = request.form.get("new_player_name")
             player_to_update = Player.query.filter_by(player_name=player_name, group_id=session["group_id"]).first()
@@ -512,18 +521,18 @@ def edit_delete_player_complete():
                 db.session.commit()
         elif edit_or_delete == "delete":
             #Check again no scores
-            player_id = Player.query.filter_by(group_id=session["group_id"], player_name=player_name).first().id
-            player_scores = Scores.query.filter_by(player_id=player_id).all()
+            player_to_delete = Player.query.filter_by(group_id=session["group_id"], player_name=player_name).first()
+            if not player_to_delete:
+                return apology("Player not found.", 400)
+            player_scores = Scores.query.filter_by(player_id=player_to_delete.id).all()
             if len(player_scores):
-                return apology("can't delete player with score history", 400)
+                return apology("Can't delete player with score history.", 400)
             
             #Delete from players database
-            db.execute("DELETE FROM players WHERE id = ?", player_id)
-            player_to_delete = Player.query.filter_by(id=player_id).first()
             db.session.delete(player_to_delete)
             db.session.commit()
         else:
-            return apology("no edit or delete request")
+            return apology("Invalid request. Please select either edit or delete.", 400)
        
         return redirect("/players")
     else:
@@ -542,16 +551,16 @@ def create_event():
         try:
             num_players = int(request.form.get("num_players"))
         except ValueError:
-            return apology("Num Team must be integer")
+            return apology("Number of players must be an integer.")
        
        #Send back if pressed enter with 0 players or no event name
         if not num_players or not event_name or not event_date:
-            redirect("/create_event")
+            return redirect("/create_event")
         
         # Confim event name doesnt exist in the group already
         event_rows = Event.query.filter_by(event_name=event_name, group_id=session["group_id"]).all()
         if len(event_rows):
-            return apology("event name already exists in group")
+            return apology("Event name already exists in group.")
         
         num_teams = math.ceil(num_players / 2)
         team_names = []
@@ -565,82 +574,81 @@ def create_event():
     else:
         return render_template("create_event.html")
 
-# @app.route("/create_event_continued", methods=["GET", "POST"])
-# @login_required
-# @group_login_required
-# def create_event_continued():
-#     """Create Event - Team Details"""
+@app.route("/create_event_continued", methods=["GET", "POST"])
+@login_required
+@group_login_required
+def create_event_continued():
+    """Create Event - Team Details"""
     
-#     if request.method == "POST":
+    if request.method != "POST":
+        return apology("Invalid request method. Only POST is supported.")
 
-#         # Get event header details and error check
-#         event_name = request.form.get("event_name")
-#         event_date = request.form.get("event_date")
-#         if not event_name or event_date:
-#             return apology("no event name or event date")
-        
-#         num_teams = int(request.form.get("num_teams"))
-#         if num_teams < 2:
-#             return apology("must have at least 2 teams")
-        
-#         # Get team details and error check
-#         teams = []
-#         for i in range(num_teams):
-#             team = {}
-#             team["team_name_temp"] = request.form.get("team_name_" + str(i))
-#             team["player_a_temp"] = request.form.get("player_a_team_" + str(i))
-#             team["hcp_a_temp"] = request.form.get("hcp_player_a_team_" + str(i))
-#             team["player_b_temp"] = request.form.get("player_b_team_" + str(i))
-#             team["hcp_b_temp"] = request.form.get("hcp_player_b_team_" + str(i))
-#             teams.append(team)
-
-#             if not team["team_name_temp"]:
-#                 return apology("team name blank")
-#             elif not team["player_a_temp"]:
-#                 return apology("need at least 1 player per team")
-#             elif not team["hcp_a_temp"]:
-#                 return apology("player a handicap blank")
-#             if team["player_b_temp"] and not team["hcp_b_temp"]:
-#                 return apology("player b handicap blank")
-
-#         logging.info(teams)
+    # Get event header details and error check
+    event_name = request.form.get("event_name")
+    event_date = request.form.get("event_date")
+    if not event_name or not event_date:
+        return apology("Both event name and event date must be provided.")
     
-#         # Insert into events table the event name, group id, and date
-#         db.execute("INSERT INTO events (event_name, group_id, date) VALUES (?, ?, ?)", event_name, session["group_id"], event_date)
+    num_teams = int(request.form.get("num_teams"))
+    if num_teams < 2:
+        return apology("At least 2 teams must be provided.")
+    
+    # Get team details and error check
+    teams = []
+    for i in range(num_teams):
+        team = {}
+        team["team_name"] = request.form.get("team_name_" + str(i))
+        team["player_a_id"] = request.form.get("player_a_team_" + str(i))
+        team["hcp_player_a"] = request.form.get("hcp_player_a_team_" + str(i))
+        team["player_b_id"] = request.form.get("player_b_team_" + str(i))
+        team["hcp_player_b"] = request.form.get("hcp_player_b_team_" + str(i))
+        teams.append(team)
 
-#         # Insert into teams table all the team names, and event_id
-#         event_id = db.execute("SELECT * FROM events WHERE event_name = ? AND group_id = ?", event_name, session["group_id"])[0]["id"]
-#         for i in range(num_teams):
-#             db.execute("INSERT INTO teams (team_name, event_id) VALUES (?, ?)", teams[i]["team_name_temp"], event_id)
+        if not team["team_name"]:
+            return apology("team name blank")
+        elif not team["player_a_id"]:
+            return apology("need at least 1 player per team")
+        elif not team["hcp_player_a"]:
+            return apology("player a handicap blank")
+        if team["player_b_id"] and not team["hcp_player_b"]:
+            return apology("player b handicap blank")
 
-#         # Insert into team_roster table the players on each team
-#         for i in range(num_teams):
-#             team_id = db.execute("SELECT * FROM teams WHERE team_name = ? AND event_id = ?", teams[i]["team_name_temp"], event_id)[0]["id"]
-#             player_id_a = db.execute("SELECT * FROM players WHERE player_name = ? AND group_id = ?", 
-#                 teams[i]["player_a_temp"], session["group_id"])[0]["id"]
-#             db.execute("INSERT INTO team_roster (team_id, player_id) VALUES (?, ?)", 
-#                 team_id, player_id_a)
-#             if teams[i]["player_b_temp"]:
-#                 player_id_b = db.execute("SELECT * FROM players WHERE player_name = ? AND group_id = ?", 
-#                     teams[i]["player_b_temp"], session["group_id"])[0]["id"]
-#                 db.execute("INSERT INTO team_roster (team_id, player_id) VALUES (?, ?)", 
-#                     team_id, player_id_b)
-        
-#         # Insert into handicaps table for each player id the event id and player hcp
-#         for i in range(num_teams):
-#             player_id_a = db.execute("SELECT * FROM players WHERE player_name = ? AND group_id = ?", 
-#                 teams[i]["player_a_temp"], session["group_id"])[0]["id"]
-#             db.execute("INSERT INTO handicaps (player_id, event_id, player_hcp) VALUES (?, ?, ?)", 
-#                 player_id_a, event_id, teams[i]["hcp_a_temp"])
-#             if teams[i]["player_b_temp"]:
-#                 player_id_b = db.execute("SELECT * FROM players WHERE player_name = ? AND group_id = ?", 
-#                     teams[i]["player_b_temp"], session["group_id"])[0]["id"]
-#                 db.execute("INSERT INTO handicaps (player_id, event_id, player_hcp) VALUES (?, ?, ?)", 
-#                     player_id_b, event_id, teams[i]["hcp_b_temp"])
+    logging.info(teams)
 
-#         return redirect("/")
-#     else:
-#         return apology("GET request??")
+    # Reconfim event name doesnt exist in the group already
+    event_rows = Event.query.filter_by(event_name=event_name, group_id=session["group_id"]).all()
+    if len(event_rows):
+        return apology("Event name already exists in group.")
+    
+    # Insert into events table the event name, group id, and date
+    new_event = Event(event_name=event_name, group_id=session["group_id"], date=event_date)
+    db.session.add(new_event)
+
+    # Insert into teams table all the team names, and event_id
+    event_id = new_event.id
+    for i in range(num_teams):
+        new_team = Team(team_name=teams[i]["team_name"], event_id=event_id)
+        db.session.add(new_team)
+
+    # Insert into team_roster table the players on each team; also insert into handicaps table
+    # for each player id the event id and player hcp
+    for i in range(num_teams):
+        team_id = Team.query.filter_by(team_name=teams[i]["team_name"], event_id=event_id).first().id
+        player_a_id = teams[i]["player_a_id"]
+        new_team_roster_entry = TeamRoster(team_id=team_id, player_id=player_a_id)
+        db.session.add(new_team_roster_entry)
+        new_handicap = Handicap(player_id=player_a_id, event_id=event_id, player_hcp=teams[i]["hcp_player_a"])
+        db.session.add(new_handicap)
+        if teams[i]["player_b_id"]:
+            player_b_id = teams[i]["player_b_id"]
+            new_team_roster_entry = TeamRoster(team_id=team_id, player_id=player_b_id)
+            db.session.add(new_team_roster_entry)
+            new_handicap = Handicap(player_id=player_b_id, event_id=event_id, player_hcp=teams[i]["hcp_player_b"])
+            db.session.add(new_handicap)
+    
+    db.session.commit()
+
+    return redirect("/")
 
 
 # @app.route("/event_structure", methods=["GET", "POST"])
@@ -704,19 +712,19 @@ def create_event():
 #         return render_template("event_structure.html", rounds=rounds, num_teams=num_teams, event_name=event_name,
 #             teams=teams)
 
-# @app.route("/event_scoreboard", methods=["GET", "POST"])
-# @login_required
-# @group_login_required
-# @event_selected
-# def event_scoreboard():
-#     """Event Scoreboard
-#     TODO
+@app.route("/event_scoreboard", methods=["GET", "POST"])
+@login_required
+@group_login_required
+@event_selected
+def event_scoreboard():
+    """Event Scoreboard
+    TODO
   
-#     overall scoreboard
+    overall scoreboard
     
-#     """
+    """
   
-#     return apology("To Do Event Scoreboard")
+    return apology("To Do Event Scoreboard")
 
 # @app.route("/courseadmin", methods=["GET", "POST"])
 # @login_required
