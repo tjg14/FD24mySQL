@@ -14,8 +14,9 @@ CREATE TABLE golf_groups (
 CREATE TABLE group_user_associations (
     group_id INT NOT NULL,
     user_id INT NOT NULL,
-    FOREIGN KEY (group_id) REFERENCES golf_groups(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (group_id) REFERENCES groups(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    PRIMARY KEY (group_id, user_id)
 );
 
 CREATE TABLE course_tee (
@@ -32,7 +33,8 @@ CREATE TABLE holes (
     hole_number INT NOT NULL,
     par INT NOT NULL,
     hole_hcp INT NOT NULL,
-    FOREIGN KEY (course_id) REFERENCES course_tee(id)
+    FOREIGN KEY (course_id) REFERENCES course_tee(id),
+    PRIMARY KEY (course_id, hole_number)
 );
 
 CREATE TABLE events (
@@ -55,6 +57,7 @@ CREATE TABLE team_roster (
     player_id INT NOT NULL,
     FOREIGN KEY (team_id) REFERENCES teams(id),
     FOREIGN KEY (player_id) REFERENCES players(id)
+    PRIMARY KEY (team_id, player_id)
 );
 
 TO UPDATE ROSTER FOREIGN KEYSSSSs
@@ -106,4 +109,5 @@ CREATE TABLE scores (
     score INT NOT NULL,
     FOREIGN KEY (match_id) REFERENCES matches(id),
     FOREIGN KEY (player_id) REFERENCES players(id)
+    PRIMARY KEY (match_id, match_hole_number, player_id)
 );

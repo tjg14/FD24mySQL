@@ -3,6 +3,7 @@ import os, math
 from cs50 import SQL
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, desc
+from sqlalchemy.orm import joinedload
 from flask import Flask, jsonify, flash, redirect, render_template, request, session
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -93,6 +94,9 @@ class Team(db.Model):
     team_name = db.Column(db.String(50), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey("events.id"), nullable=False)
 
+    # Define a relationship to the Player model
+    players = db.relationship('Player', secondary='team_roster', backref='teams')
+
 class TeamRoster(db.Model):
     __tablename__ = 'team_roster'
 
@@ -133,6 +137,8 @@ class Round(db.Model):
     round_name = db.Column(db.String(50), nullable=True)
     event_id = db.Column(db.Integer, db.ForeignKey("events.id"), nullable=False)
 
+    matches = db.relationship('Match', backref='round')
+
 class Match(db.Model):
     __tablename__ = 'matches'
 
@@ -145,6 +151,10 @@ class Match(db.Model):
     team_a_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
     team_b_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
     status = db.Column(db.String(15), nullable=False, server_default='INCOMPLETE')
+
+    team_a = db.relationship('Team', foreign_keys=[team_a_id])
+    team_b = db.relationship('Team', foreign_keys=[team_b_id])
+    course_tee = db.relationship('CourseTee')
 
 class Scores(db.Model):
     __tablename__ = 'scores'
@@ -583,7 +593,6 @@ def create_event_continued():
     if request.method != "POST":
         return apology("Invalid request method. Only POST is supported.")
 
-    # Get event header details and error check
     event_name = request.form.get("event_name")
     event_date = request.form.get("event_date")
     if not event_name or not event_date:
@@ -616,12 +625,16 @@ def create_event_continued():
     logging.info(teams)
 
     # Reconfim event name doesnt exist in the group already
-    event_rows = Event.query.filter_by(event_name=event_name, group_id=session["group_id"]).all()
+    event_rows = (Event.query
+                  .filter_by(event_name=event_name, group_id=session["group_id"])
+                  .all())
     if len(event_rows):
         return apology("Event name already exists in group.")
     
     # Insert into events table the event name, group id, and date
-    new_event = Event(event_name=event_name, group_id=session["group_id"], date=event_date)
+    new_event = Event(event_name=event_name, 
+                  group_id=session["group_id"], 
+                  date=event_date)
     db.session.add(new_event)
 
     # Insert into teams table all the team names, and event_id
@@ -651,66 +664,107 @@ def create_event_continued():
     return redirect("/")
 
 
-# @app.route("/event_structure", methods=["GET", "POST"])
-# @login_required
-# @group_login_required
-# @event_selected
-# def event_structure():
-#     """Event Details"""
+@app.route("/event_structure", methods=["GET", "POST"])
+@login_required
+@group_login_required
+@event_selected
+def event_structure():
+    """Event Details"""
 
-#     if request.method == "POST":
-#         # Get new round name (optional)
-#         new_round_name = request.form.get("new_round_name")
-#         # Get course selection
-#         course_id_selected = request.form.get("course_select")
-#         if not course_id_selected:
-#             return apology("no course selected")
-#         # Get round number
-#         round_number = int(request.form.get("num_rounds_input")) + 1
-#         # Get teams and matches
-#         num_teams = int(db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"])
-#         num_matches = int(num_teams / 2)
-#         matches = []
-#         for i in range(num_matches):
-#             team_a_id = int(request.form.get("team_a_match_" + str(i + 1)))
-#             team_b_id = int(request.form.get("team_b_match_" + str(i + 1)))
-#             if not team_a_id or not team_b_id:
-#                 return apology("team not selected - match " + str(i + 1))
-#             matches.append({"match_number": i + 1, "team_a": team_a_id, "team_b": team_b_id})
+    if request.method == "POST":
         
-#         # Insert new round into rounds table
-#         db.execute("INSERT INTO rounds (round_number, round_name, event_id) VALUES (?, ?, ?)",
-#             round_number, new_round_name, session["event_id"])
-#         # Get round id
-#         round_id = db.execute("SELECT MAX(id) FROM rounds WHERE event_id = ?", session["event_id"])[0]["MAX(id)"]
-#         # Insert matches into matches table
-#         for match in matches:
-#             db.execute("INSERT INTO matches (match_number, match_starting_hole, round_id, course_id," +
-#                 "team_a_id, team_b_id) VALUES (?, ?, ?, ?, ?, ?)", match["match_number"], 1, round_id,
-#                 course_id_selected, match["team_a"], match["team_b"])
+        new_round_name = request.form.get("new_round_name")
+        course_id_selected = request.form.get("course_select")
+        if not course_id_selected:
+            return apology("No course selected")
+        
+        round_number = int(request.form.get("num_rounds_input")) + 1
+        if not round_number:
+            return apology("Round number not sent in POST request")
+        
+        num_teams = Team.query.filter_by(event_id=session["event_id"]).count()
+        num_matches = int(num_teams / 2)
+        matches = []
+        for i in range(num_matches):
+            team_a_id = int(request.form.get("team_a_match_" + str(i + 1)))
+            team_b_id = int(request.form.get("team_b_match_" + str(i + 1)))
+            if not team_a_id or not team_b_id:
+                return apology("Team not selected in match " + str(i + 1))
+            matches.append({
+                "match_number": i + 1, 
+                "team_a": team_a_id, 
+                "team_b": team_b_id
+            })
+        
+        # Insert new round details into rounds table
+        new_round = Round(round_number=round_number, 
+                          round_name=new_round_name, 
+                          event_id=session["event_id"])
+        db.session.add(new_round)
+        db.session.commit()
+        
+        round_id = new_round.id
+        
+        # Insert matches into matches table
+        for match in matches:
+            new_match = Match(match_number=match["match_number"], 
+                              match_starting_hole=1,
+                              round_id=round_id, 
+                              course_id=course_id_selected, 
+                              team_a_id=match["team_a"], 
+                              team_b_id=match["team_b"])
+            db.session.add(new_match)
+        db.session.commit()
+        
+        return redirect("/event_structure")
+    else:
+        # Get event data needed to display and structure matches in rounds
 
-#         return redirect("/event_structure")
-#     else:
-#         # Get event data needed to display and structure matches in rounds
-#         rounds = db.execute("SELECT * FROM rounds WHERE event_id = ? ORDER BY round_number ASC", session["event_id"])
-#         # Built list of dictionaries for each round with round number, round name, and matches (match number, team a, team b, team a score, team b score)
-#         for round in rounds:
-#             matches = db.execute("SELECT * FROM matches WHERE round_id = ?", round["id"])
-#             round["matches"] = []
-#             for match in matches:
-#                 team_a = db.execute("SELECT * FROM teams WHERE id = ?", match["team_a_id"])[0]["team_name"]
-#                 team_b = db.execute("SELECT * FROM teams WHERE id = ?", match["team_b_id"])[0]["team_name"]
-#                 course_name = db.execute("SELECT * FROM course_tee WHERE id = ?", match["course_id"])[0]["name"]
-#                 course_tees = db.execute("SELECT * FROM course_tee WHERE id = ?", match["course_id"])[0]["teebox"]
-#                 round["matches"].append({"match_number": match["match_number"], "course_name": course_name + " - " +course_tees + " Tees",
-#                      "team_a": team_a, "team_b": team_b, "team_a_score": "create fn", "team_b_score": "create fn"})
+        rounds = (Round.query
+                  .filter_by(event_id=session["event_id"])
+                  .order_by(Round.round_number)
+                  .all())
+        
+        rounds_data = []
+        for round in rounds:
+            matches = (Match.query
+               .options(
+                   joinedload(Match.team_a), 
+                   joinedload(Match.team_b), 
+                   joinedload(Match.course_tee)
+                )
+               .filter_by(round_id=round.id)
+               .all())
+            
+            matches_data = []
+            for match in matches:
+                team_a = match.team_a.team_name
+                team_b = match.team_b.team_name
+                course_name = match.course_tee.name
+                course_tees = match.course_tee.teebox
+                matches_data.append({
+                    "match_number": match.match_number, 
+                    "course_name": course_name + " - " +course_tees + " Tees",
+                    "team_a": team_a, 
+                    "team_b": team_b, 
+                    "team_a_score": "create fn", 
+                    "team_b_score": "create fn"
+                })
+            
+            round_data = {
+                "round_number": round.round_number, 
+                "round_name": round.round_name, 
+                "matches": matches_data
+            }
+            rounds_data.append(round_data)
        
-#         num_teams = db.execute("SELECT COUNT(*) as count FROM teams WHERE event_id = ?", session["event_id"])[0]["count"]
-#         event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
-#         teams = db.execute("SELECT * FROM teams WHERE event_id = ?", session["event_id"])
+        num_teams = Team.query.filter_by(event_id=session["event_id"]).count()
+        event_name = Event.query.filter_by(id=session["event_id"]).first().event_name
+        teams = Team.query.filter_by(event_id=session["event_id"]).all()
 
-#         return render_template("event_structure.html", rounds=rounds, num_teams=num_teams, event_name=event_name,
-#             teams=teams)
+        return render_template("event_structure.html", rounds=rounds_data, 
+                               num_teams=num_teams, event_name=event_name,
+                               teams=teams)
 
 @app.route("/event_scoreboard", methods=["GET", "POST"])
 @login_required
@@ -726,271 +780,341 @@ def event_scoreboard():
   
     return apology("To Do Event Scoreboard")
 
-# @app.route("/courseadmin", methods=["GET", "POST"])
-# @login_required
-# def course_admin():
-#     """Add courses to database in admin mode"""
-#     if request.method == "POST":
-#         # Get course name
-#         course_name = request.form.get("new_course_name")
-#         if not course_name:
-#             return apology("no course name")
-#         # Get course tees
-#         course_tees = request.form.get("course_tees")
-#         if not course_tees:
-#             return apology("no course tees")
-#         # Get course slope
-#         course_slope = request.form.get("course_tee_slope")
-#         # Make sure course slope is not blank and is an integer betwee 55 and 155
-#         if not course_slope:
-#             return apology("no course slope")
-#         try:
-#             course_slope = int(course_slope)
-#             if course_slope < 55 or course_slope > 155:
-#                 return apology("course slope must be between 55 and 155")
-#         except ValueError:
-#             return apology("course slope must be an integer")
-#         # Get course rating
-#         course_rating = request.form.get("course_tee_rating")
-#         # Make sure course rating is not blank and is a float between 50 and 80
-#         if not course_rating:
-#             return apology("no course rating")
-#         try:
-#             course_rating = float(course_rating)
-#             if course_rating < 50 or course_rating > 80:
-#                 return apology("course rating must be between 50 and 80")
-#         except ValueError:
-#             return apology("course rating must be a float")
-        
-#         # Loop through all 18 holes, get par and handicap for each hole
-#         holes = []
-#         for i in range(1, 19):
-#             par = request.form.get("hole_par_" + str(i))
-#             if not par:
-#                 return apology("no par for hole " + str(i))
-#             try:
-#                 par = int(par)
-#             except ValueError:
-#                 return apology("par for hole " + str(i) + " must be an integer")
-#             handicap = request.form.get("hole_hcp_" + str(i))
-#             if not handicap:
-#                 return apology("no handicap for hole " + str(i))
-#             try:
-#                 handicap = int(handicap)
-#             except ValueError:
-#                 return apology("handicap for hole " + str(i) + " must be an integer")
-#             holes.append({"hole": i, "par": par, "handicap": handicap})
-        
-#         # Insert course into courses table
-#         db.execute("INSERT INTO course_tee (name, teebox, rating, slope) VALUES (?, ?, ?, ?)",
-#             course_name, course_tees, course_rating, course_slope)
-#         # Get course id
-#         course_id = db.execute("SELECT MAX(id) FROM course_tee WHERE name = ? AND teebox = ?", 
-#             course_name, course_tees)[0]["MAX(id)"]
-#         # Insert holes into holes table
-#         for hole in holes:
-#             db.execute("INSERT INTO holes (course_id, hole_number, par, hole_hcp) VALUES (?, ?, ?, ?)",
-#                 course_id, hole["hole"], hole["par"], hole["handicap"])
-             
-#         return redirect("/")
-#     else:
-#         return render_template("course_input.html")
+@app.route("/courseadmin", methods=["GET", "POST"])
+@login_required
+def course_admin():
+    """Add courses to database in admin mode"""
     
-# @app.route('/api/courses', methods=['GET'])
-# def get_courses():
-#     # Query the database for all courses
-#     courses = db.execute("SELECT * FROM course_tee")
+    if request.method == "POST":
+        course_name = request.form.get("new_course_name")
+        if not course_name:
+            return apology("no course name")
 
-#     # Convert the list of Course objects to a list of dictionaries
-#     courses_list = [{"id": course["id"], "name": course["name"] + " - " + course["teebox"] + " " +
-#         str(course["rating"]) + "/" + str(course["slope"])} for course in courses]
+        course_tees = request.form.get("course_tees")
+        if not course_tees:
+            return apology("no course tees")
 
-#     # Return the list of courses as JSON
-#     return jsonify(courses_list)
-
-# @app.route('/scorecard', methods=['GET', 'POST'])
-# def scorecard():
-
-#     if request.method == "POST":
+        course_slope = request.form.get("course_tee_slope")
+        if not course_slope:
+            return apology("no course slope")
         
-#         # Get round number
-#         round_number = request.form.get("round_number")
+        try:
+            course_slope = int(course_slope)
+            if course_slope < 55 or course_slope > 155:
+                return apology("Course slope must be between 55 and 155")
+        except ValueError:
+            return apology("Course slope must be an integer")
+       
+        course_rating = request.form.get("course_tee_rating")
+        if not course_rating:
+            return apology("no course rating")
         
-#         # Get match number
-#         match_number = request.form.get("match_number")
+        try:
+            course_rating = float(course_rating)
+            if course_rating < 50 or course_rating > 80:
+                return apology("Course rating must be between 50 and 80")
+        except ValueError:
+            return apology("Course rating must be a float")
         
-#         # Error check for round and match number
-#         if not round_number or not match_number:
-#             return apology("round or match number not sent in POST request")
+        # Loop through all 18 holes, get par and handicap for each hole
+        holes = []
+        for i in range(1, 19):
+            par = request.form.get("hole_par_" + str(i))
+            if not par:
+                return apology("Must have par for hole " + str(i))
+            try:
+                par = int(par)
+            except ValueError:
+                return apology("Par for hole " + str(i) + " must be an integer")
+            handicap = request.form.get("hole_hcp_" + str(i))
+            if not handicap:
+                return apology("Must have handicap for hole " + str(i))
+            try:
+                handicap = int(handicap)
+            except ValueError:
+                return apology("Handicap for hole " + str(i) + " must be an integer")
+            holes.append({"hole_number": i, "par": par, "hole_hcp": handicap})
         
-#         # Clear previous and add round number and match number to session
-#         session.pop("round", None)
-#         session.pop("match", None)
-#         session["round_number"] = round_number
-#         session["match_number"] = match_number
-#     else:
-#         # Get round number and match number from session
-#         round_number = session["round_number"]
-#         match_number = session["match_number"]
+        # Insert course into courses table
+        new_course = CourseTee(name=course_name, 
+                               teebox=course_tees, 
+                               rating=course_rating, 
+                               slope=course_slope
+                               )
+        db.session.add(new_course)
+        db.session.commit()
+        course_id = new_course.id
 
-#         # If round number or match number not in session, return apology
-#         if not round_number or not match_number:
-#             redirect("/event_structure")
-
-#     # Get round id and match id 
-#     round_id = db.execute("SELECT id FROM rounds WHERE event_id = ? AND round_number = ?", 
-#         session["event_id"], round_number)[0]["id"]
-#     match_id = db.execute("SELECT id FROM matches WHERE round_id = ? AND match_number = ?", 
-#         round_id, match_number)[0]["id"]
-#     match_data = {"match_number": match_number, "match_id": match_id}
-
-#     # Get event name
-#     event_name = db.execute("SELECT event_name FROM events WHERE id = ?", session["event_id"])[0]["event_name"]
+        # Insert holes into holes table
+        for hole in holes:
+            new_hole = Hole(course_id=course_id, 
+                            hole_number=hole["hole_number"], 
+                            par=hole["par"], 
+                            hole_hcp=hole["hole_hcp"]
+                            ) 
+            db.session.add(new_hole)
+        db.session.commit()
+        
+        return redirect("/")
+    else:
+        return render_template("course_input.html")
     
-#     # Get course id and display name
-#     course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
-#     course_name = db.execute("SELECT name FROM course_tee WHERE id = ?", course_id)[0]["name"]
-#     course_tee = db.execute("SELECT teebox FROM course_tee WHERE id = ?", course_id)[0]["teebox"]
-#     course_display_name = course_name + " - " + course_tee + " Tees"
+@app.route('/api/courses', methods=['GET'])
+def get_courses():
+    """Get a list of courses and their teeboxes, ratings, and slopes"""
     
-#     # Get team and player names
-#     team_a_id = db.execute("SELECT team_a_id FROM matches WHERE id = ?", match_id)[0]["team_a_id"]
-#     team_b_id = db.execute("SELECT team_b_id FROM matches WHERE id = ?", match_id)[0]["team_b_id"]
-#     team_a_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_a_id)[0]["team_name"]
-#     team_b_name = db.execute("SELECT team_name FROM teams WHERE id = ?", team_b_id)[0]["team_name"]
-#     team_a_players = db.execute("SELECT * FROM players WHERE id IN " +
-#         "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_a_id)
-#     team_b_players = db.execute("SELECT * FROM players WHERE id IN " +
-#         "(SELECT player_id FROM team_roster WHERE team_id = ?)", team_b_id)
-#     team_data = {"team_a_name": team_a_name, "team_a_players": team_a_players, "team_b_name": team_b_name, "team_b_players": team_b_players}
+    courses = CourseTee.query.filter_by(active=1).all()
+
+    # Convert the list of Course objects to a list of dictionaries
+    courses_list = [
+        {
+            "id": course.id, 
+            "name": (
+                course.name + " - " + course.teebox + " " +
+                str(course.rating) + "/" + str(course.slope)
+            )
+        } 
+        for course in courses
+    ]
+
+    # Return the list of courses as JSON
+    return jsonify(courses_list)
+
+@app.route('/scorecard', methods=['GET', 'POST'])
+@login_required
+@group_login_required
+@event_selected
+def scorecard():
+
+    if request.method == "POST":
+
+        round_number = request.form.get("round_number")
+        match_number = request.form.get("match_number")
+        if not round_number or not match_number:
+            return apology("Round or match number not sent in POST request")
+        
+        # Clear previous and add round number and match number to session
+        session.pop("round_number", None)
+        session.pop("match_number", None)
+        session["round_number"] = round_number
+        session["match_number"] = match_number
+    else:
+        round_number = session["round_number"]
+        match_number = session["match_number"]
+        if not round_number or not match_number:
+            return redirect("/event_structure")
+
+    round = (Round.query
+         .options(joinedload(Round.matches))
+         .filter_by(event_id=session["event_id"], round_number=round_number)
+         .first())
+    if not round:
+        return apology("Round not found")
+
+    # Find match in round returned
+    match = next((m for m in round.matches if m.match_number == match_number), None)
+    if not match:
+        return apology("Match not found")
+
+    match_data = {"match_number": match_number, "match_id": match.id}
+
+    event = Event.query.get(session["event_id"])
+    if not event:
+        return apology("Event not found")
+    event_name = event.event_name
     
-#     # Get course holes
-#     holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course_id)
-#     # For each hole in holes, get the score for each player in team a and team b, keep track of total par
-#     total_par = {"front_9_par": 0, "back_9_par": 0, "total_18_par": 0}
-#     for hole in holes:
-#         hole["team_a_scores"] = []
-#         hole["team_b_scores"] = []
-#         for player in team_a_players:
-#             player_id = db.execute("SELECT id FROM players WHERE player_name = ? AND group_id = ?", player["player_name"],
-#                 session["group_id"])[0]["id"]
-#             score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-#                 player_id, match_id, hole["hole_number"])
-#             if score:
-#                 hole["team_a_scores"].append(score[0]["score"])
-#             else:
-#                 hole["team_a_scores"].append("-")
-#         for player in team_b_players:
-#             player_id = db.execute("SELECT id FROM players WHERE player_name = ? AND group_id = ?", player["player_name"],
-#                 session["group_id"])[0]["id"]
-#             score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-#                 player_id, match_id, hole["hole_number"])
-#             if score:
-#                 hole["team_b_scores"].append(score[0]["score"])
-#             else:
-#                 hole["team_b_scores"].append("-")
-#         # Sum par for front 9, back 9, and total 18 holes
-#         if hole["hole_number"] < 10:
-#             total_par["front_9_par"] += hole["par"]
-#         else:
-#             total_par["back_9_par"] += hole["par"]
-#         total_par["total_18_par"] += hole["par"]
+    course = CourseTee.query.get(match.course_id)
+    if not course:
+        return apology("Course not found")
+
+    course_display_name = course.name + " - " + course.teebox + " Tees"
+    
+    # Get team and player names for match
+    team_a = Team.query.options(joinedload(Team.players)).get(match.team_a_id)
+    if not team_a:
+        return apology("Team A not found")
+
+    team_b = Team.query.options(joinedload(Team.players)).get(match.team_b_id)
+    if not team_b:
+        return apology("Team B not found")
+
+    team_data = {
+        "team_a_name": team_a.team_name, 
+        "team_a_players": team_a.players, 
+        "team_b_name": team_b.team_name, 
+        "team_b_players": team_b.players
+    }
+    
+    # Get course holes
+    holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course.id)
+    # For each hole in holes, get the score for each player in team a and team b, keep track of total par
+    total_par = {"front_9_par": 0, "back_9_par": 0, "total_18_par": 0}
+    for hole in holes:
+        hole["team_a_scores"] = []
+        hole["team_b_scores"] = []
+        for player in team_a_players:
+            player_id = db.execute("SELECT id FROM players WHERE player_name = ? AND group_id = ?", player["player_name"],
+                session["group_id"])[0]["id"]
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player_id, match.id, hole["hole_number"])
+            if score:
+                hole["team_a_scores"].append(score[0]["score"])
+            else:
+                hole["team_a_scores"].append("-")
+        for player in team_b_players:
+            player_id = db.execute("SELECT id FROM players WHERE player_name = ? AND group_id = ?", player["player_name"],
+                session["group_id"])[0]["id"]
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player_id, match.id, hole["hole_number"])
+            if score:
+                hole["team_b_scores"].append(score[0]["score"])
+            else:
+                hole["team_b_scores"].append("-")
+        # Sum par for front 9, back 9, and total 18 holes
+        if hole["hole_number"] < 10:
+            total_par["front_9_par"] += hole["par"]
+        else:
+            total_par["back_9_par"] += hole["par"]
+        total_par["total_18_par"] += hole["par"]
 
 
-#     # Calculate player totals for front 9, back 9, and total 18 holes
-#     for player in team_a_players:
-#         player["front_9_total"] = 0
-#         player["back_9_total"] = 0
-#         player["total_18"] = 0
-#         for i in range(1, 19):
-#             score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-#                 player["id"], match_id, i)
-#             if score:
-#                 if i < 10:
-#                     player["front_9_total"] += score[0]["score"]
-#                 else:
-#                     player["back_9_total"] += score[0]["score"]
-#                 player["total_18"] += score[0]["score"]
-#     for player in team_b_players:
-#         player["front_9_total"] = 0
-#         player["back_9_total"] = 0
-#         player["total_18"] = 0
-#         for i in range(1, 19):
-#             score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-#                 player["id"], match_id, i)
-#             if score:
-#                 if i < 10:
-#                     player["front_9_total"] += score[0]["score"]
-#                 else:
-#                     player["back_9_total"] += score[0]["score"]
-#                 player["total_18"] += score[0]["score"]
+    # Calculate player totals for front 9, back 9, and total 18 holes
+    for player in team_a_players:
+        player["front_9_total"] = 0
+        player["back_9_total"] = 0
+        player["total_18"] = 0
+        for i in range(1, 19):
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player["id"], match_id, i)
+            if score:
+                if i < 10:
+                    player["front_9_total"] += score[0]["score"]
+                else:
+                    player["back_9_total"] += score[0]["score"]
+                player["total_18"] += score[0]["score"]
+    for player in team_b_players:
+        player["front_9_total"] = 0
+        player["back_9_total"] = 0
+        player["total_18"] = 0
+        for i in range(1, 19):
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player["id"], match.id, i)
+            if score:
+                if i < 10:
+                    player["front_9_total"] += score[0]["score"]
+                else:
+                    player["back_9_total"] += score[0]["score"]
+                player["total_18"] += score[0]["score"]
  
-#     # Collect team data for scorecard
-#     team_data = {"team_a_name": team_a_name, "team_a_players": team_a_players, "team_b_name": team_b_name, "team_b_players": team_b_players}
+    # Collect team data for scorecard
+    team_data = {"team_a_name": team_a_name, 
+                 "team_a_players": team_a_players, 
+                 "team_b_name": team_b_name, 
+                 "team_b_players": team_b_players
+                 }
     
-#     return render_template("scorecard.html", event_name=event_name, course_display_name=course_display_name,
-#         round_number=round_number, match_data=match_data, holes=holes, team_data=team_data, total_par=total_par)
+    return render_template("scorecard.html", 
+                           event_name=event_name, 
+                           course_display_name=course_display_name,
+                           round_number=round_number, 
+                           match_data=match_data, 
+                           holes=holes, 
+                           team_data=team_data, 
+                           total_par=total_par
+                           )
     
     
-# @app.route('/scorecard_edit', methods=['GET', 'POST'])
-# def scorecard_edit():
+@app.route('/scorecard_edit', methods=['GET', 'POST'])
+@login_required
+@group_login_required
+@event_selected
+def scorecard_edit():
  
-#     if request.method == "POST":
+    if request.method == "POST":
 
-#         # Get match id and player id
-#         match_id = request.form.get("match_id")
-#         player_id = request.form.get("player_id")
-#         player_name = db.execute("SELECT player_name FROM players WHERE id = ?", player_id)[0]["player_name"]
+        match_id = request.form.get("match_id")
+        player_id = request.form.get("player_id")
+        if not match_id or not player_id:
+            return apology("Match or player id not sent in POST request")
+        
+        player = Player.query.get(player_id)
+        match = Match.query.get(match_id)
+        course_tee = CourseTee.query.get(match.course_id)
 
-#         # Get course id and display name
-#         course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
-#         course_name = db.execute("SELECT name FROM course_tee WHERE id = ?", course_id)[0]["name"]
-#         course_tee = db.execute("SELECT teebox FROM course_tee WHERE id = ?", course_id)[0]["teebox"]
-#         course_display_name = course_name + " - " + course_tee + " Tees"
+        player_name = player.player_name
+        course_display_name = course_tee.name + " - " + course_tee.teebox + " Tees"
 
-#         # Get course holes
-#         holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course_id)
+        holes = (Hole.query
+                 .filter_by(course_id=course_tee.id)
+                 .order_by(Hole.hole_number)
+                 .all()
+                )
+        scores = (Scores.query
+                  .filter_by(player_id=player_id, match_id=match_id)
+                  .all()
+                 )
 
-#         # For each hole, append the score for the player_id if it exists, else leave blank
-#         for hole in holes:
-#             score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-#                 player_id, match_id, hole["hole_number"])
-#             if score:
-#                 hole["score"] = score[0]["score"]
-#             else:
-#                 hole["score"] = None
+        # Create a dictionary mapping hole numbers to scores
+        score_dict = {score.match_hole_number: score.score for score in scores}
 
-#         return render_template("scorecard_edit.html", holes=holes, course_display_name=course_display_name, 
-#             match_id=match_id, player_id=player_id, player_name=player_name)
-#     else:
-#         return redirect("/event_structure")
+        holes_data = []
+        for hole in holes:
+            hole_data = {"hole_number": hole.hole_number, 
+                         "par": hole.par, 
+                         "hole_hcp": hole.hole_hcp,
+                         "score": score_dict.get(hole.hole_number, None)
+                         }
+            holes_data.append(hole_data)
 
-# @app.route('/scorecard_processing', methods=['GET', 'POST'])
-# def scorecard_processing():
+        return render_template("scorecard_edit.html", 
+                               holes=holes_data, 
+                               course_display_name=course_display_name, 
+                               match_id=match_id, 
+                               player_id=player_id, 
+                               player_name=player_name
+                               )
+    else:
+        return redirect("/event_structure")
+
+@app.route('/scorecard_processing', methods=['GET', 'POST'])
+@login_required
+@group_login_required
+@event_selected
+def scorecard_processing():
  
-#     if request.method == "POST":
+    if request.method == "POST":
             
-#         # Get match id and player id and hcp
-#         match_id = request.form.get("match_id")
-#         player_id = request.form.get("player_id")
+        match_id = request.form.get("match_id")
+        player_id = request.form.get("player_id")
+        if not match_id or not player_id:
+            return apology("Match or player id not sent in POST request")
 
-#         # Get course id
-#         course_id = db.execute("SELECT course_id FROM matches WHERE id = ?", match_id)[0]["course_id"]
-
-#         # For each hole, get the score and update the scores table, checking if score exits and updating if so
-#         for i in range(1, 19):
-#             score = int(request.form.get("score_hole_" + str(i)))
-#             if score and score > 0:
-#                 score_rows = db.execute("SELECT * FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-#                     player_id, match_id, i)
-#                 if score_rows:
-#                     db.execute("UPDATE scores SET score = ? WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-#                         score, player_id, match_id, i)
-#                 else:   
-#                     db.execute("INSERT INTO scores (match_id, match_hole_number, player_id, score) VALUES (?, ?, ?, ?)",
-#                         match_id, i, player_id, score)
+        # Update the scores table
+        for i in range(1, 19):
+            score = int(request.form.get("score_hole_" + str(i)))
+            if score and score > 0:
+                score_row = (Scores.query
+                             .filter_by(player_id=player_id, 
+                                        match_id=match_id, 
+                                        match_hole_number=i
+                                        )
+                             .first()
+                            )
+                if score_row:
+                    score_row.score = score
+                else:   
+                    new_score = Scores(match_id=match_id, 
+                                       match_hole_number=i, 
+                                       player_id=player_id, 
+                                       score=score
+                                       )
+                    db.session.add(new_score)
+            else:
+                return apology("Score for hole " + str(i) + 
+                               " must be an integer greater than 0")
+        db.session.commit()
         
-#         return redirect("/scorecard")
+        return redirect("/scorecard")
 
-#     else:
-#         return redirect("/event_structure")
+    else:
+        return redirect("/event_structure")
