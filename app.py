@@ -3,6 +3,7 @@ import os, math
 from cs50 import SQL
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, desc
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from flask import Flask, jsonify, flash, redirect, render_template, request, session
 from flask_session import Session
@@ -56,14 +57,14 @@ class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(30), nullable=False)
+    username = db.Column(db.String(30), unique=True, nullable=False)
     hash = db.Column(db.String(255), nullable=False)
 
 class GolfGroup(db.Model):
     __tablename__ = 'golf_groups'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    groupname = db.Column(db.String(50), nullable=False)
+    groupname = db.Column(db.String(50), unique=True, nullable=False)
     hash = db.Column(db.String(255), nullable=False)
 
 class GroupUserAssociation(db.Model):
@@ -207,7 +208,8 @@ def index():
         events = Event.query.filter_by(group_id=session["group_id"]).all()
         
         # Get data for rendering index.html tables of events..
-        # Add key to event dictionary for status of each event, showing complete if >0 matches with Complete status
+        # Add key to event dictionary for status of each event, 
+        # showing complete if >0 matches with Complete status
         # and incomplete if any matches are incomplete
         events_with_status = []
         for event in events:
@@ -232,12 +234,13 @@ def index():
                 incomplete_events_count += 1
             events_with_status.append(event_dict)
 
-        return render_template("index.html", groupname=groupname, events=events_with_status, complete_events_count=complete_events_count,
-            incomplete_events_count=incomplete_events_count)
+        return render_template("index.html", 
+                               groupname=groupname, 
+                               events=events_with_status, 
+                               complete_events_count=complete_events_count,
+                               incomplete_events_count=incomplete_events_count
+                               )
     
-
-# USE CONTROL K + C TO COMMENT OUT BLOCKS OF CODE
-# USE CONTROL K + U TO UNCOMMENT BLOCKS OF CODE
     
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -245,26 +248,30 @@ def register():
 
     if request.method == "POST":
 
+        username = request.form.get("username")
+        password = request.form.get("password")
+        confirmation = request.form.get("confirmation")
         # Ensure all fields not blank
-        if not request.form.get("username") or not request.form.get("password") or not request.form.get("confirmation"):
-            return apology("must provide username and password", 400)
+        if not username or not password or not confirmation:
+            return apology("Missing username, password, or confirmation.", 400)
 
-        # Query users table in database for username
-        rows = User.query.filter_by(username=request.form.get("username")).all()
-
-        # Check if username already exists in users table, if yes, return apology
-        if len(rows) > 0:
-            return apology("Username already exists", 400)
+        # Convert username to lowercase
+        username = username.lower()
 
         # Check if password matches confirmation, else return apology
-        if request.form.get("password") != request.form.get("confirmation"):
+        if password != confirmation:
             return apology("Passwords don't match", 400)
 
         # Register new user into users database along with hash of their password
-        new_user = User(username=request.form.get("username"), 
-            hash=generate_password_hash(request.form.get("password")))
-        db.session.add(new_user)
-        db.session.commit()
+        # Using unique constraint to make sure username doesn't already exist
+        try:
+            new_user = User(username=username, 
+                            hash=generate_password_hash(password))
+            db.session.add(new_user)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return apology("Username already exists", 400)
 
         # Redirect user to home page
         return redirect("/")
@@ -359,23 +366,36 @@ def group_login():
                 return apology("Missing password.", 400)
 
             # Query database for groupname
-            rows_groups = GolfGroup.query.filter(func.lower(GolfGroup.groupname) == groupname.lower()).all()
+            rows_groups = (GolfGroup.query
+                           .filter(func.lower(GolfGroup.groupname) == groupname.lower())
+                           .all()
+                           )
 
             # Ensure username exists and password is correct
-            if len(rows_groups) != 1 or not check_password_hash(rows_groups[0].hash, password):
+            if (len(rows_groups) != 1 
+                or not check_password_hash(rows_groups[0].hash, password)):
                 return apology("Invalid group name and/or password.", 400)
 
-            # Remember which user has logged in and enter into associations table if needed
+            # Remember which user has logged in 
+            # and enter into associations table if needed
             session["group_id"] = rows_groups[0].id
-            rows_associations = GroupUserAssociation.query.filter_by(user_id=session["user_id"], group_id=session["group_id"]).all()
+            rows_associations = (GroupUserAssociation.query
+                                 .filter_by(user_id=session["user_id"], group_id=session["group_id"])
+                                 .all()
+                                 )
             if not len(rows_associations):
-                new_association = GroupUserAssociation(group_id=session["group_id"], user_id=session["user_id"])
+                new_association = GroupUserAssociation(
+                    group_id=session["group_id"], 
+                    user_id=session["user_id"])
                 db.session.add(new_association)
                 db.session.commit()
         elif request.form.get("is_associated") == "yes":
             group_id = request.form.get("group_id")
             # Confirm user is associated with group
-            rows_associations = GroupUserAssociation.query.filter_by(user_id=session["user_id"], group_id=group_id).all()
+            rows_associations = (GroupUserAssociation.query
+                                 .filter_by(user_id=session["user_id"], group_id=group_id)
+                                 .all()
+                                 )
             if not len(rows_associations):
                 return redirect("/group_login")
             # Add group id to session
@@ -410,21 +430,21 @@ def create_group():
         if not groupname or not password or not confirmation:
             return apology("Missing group name, password, or confirmation.", 400)
 
-        # Query database for group name
-        rows = GolfGroup.query.filter(func.lower(GolfGroup.groupname) == groupname.lower()).all()
-
-        # Check if groupname already exists
-        if len(rows) > 0:
-            return apology("Group name already exists", 400)
+        # Convert groupname to lower case
+        groupname = groupname.lower()
 
         # Check if password matches confirmation
         if password != confirmation:
             return apology("Passwords don't match.", 400)
 
-        # Register group into groups database
-        new_group = GolfGroup(groupname=groupname, hash=generate_password_hash(password)) 
-        db.session.add(new_group)
-        db.session.commit()
+        # Register group into groups database, using unique constraint to catch if already exists
+        try:    
+            new_group = GolfGroup(groupname=groupname, hash=generate_password_hash(password)) 
+            db.session.add(new_group)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return apology("Group name already exists", 400)
 
         return redirect("/")
 
@@ -477,7 +497,11 @@ def players():
                 player_dict["latest_hcp"] = None
             players_with_hcp.append(player_dict)
 
-        return render_template("players.html", groupname=group.groupname, players=players_with_hcp, num_players=len(players))
+        return render_template("players.html", 
+                               groupname=group.groupname, 
+                               players=players_with_hcp, 
+                               num_players=len(players)
+                               )
     
 
 @app.route("/edit_delete_player", methods=["GET", "POST"])
@@ -503,7 +527,10 @@ def edit_delete_player():
             return apology("Can't delete player with score history.", 400)
 
  
-        return render_template("edit_delete_player.html",player_name=player_name, edit_or_delete=edit_or_delete)
+        return render_template("edit_delete_player.html", 
+                               player_name=player_name, 
+                               edit_or_delete=edit_or_delete
+                               )
     
     else:
         return redirect("/players")
@@ -525,7 +552,10 @@ def edit_delete_player_complete():
         
         if edit_or_delete == "edit":
             new_player_name = request.form.get("new_player_name")
-            player_to_update = Player.query.filter_by(player_name=player_name, group_id=session["group_id"]).first()
+            player_to_update = (Player.query
+                                .filter_by(player_name=player_name, group_id=session["group_id"])
+                                .first()
+                                )
             if player_to_update:
                 player_to_update.player_name = new_player_name
                 db.session.commit()
@@ -762,8 +792,10 @@ def event_structure():
         event_name = Event.query.filter_by(id=session["event_id"]).first().event_name
         teams = Team.query.filter_by(event_id=session["event_id"]).all()
 
-        return render_template("event_structure.html", rounds=rounds_data, 
-                               num_teams=num_teams, event_name=event_name,
+        return render_template("event_structure.html", 
+                               rounds=rounds_data, 
+                               num_teams=num_teams, 
+                               event_name=event_name,
                                teams=teams)
 
 @app.route("/event_scoreboard", methods=["GET", "POST"])
@@ -946,30 +978,31 @@ def scorecard():
     }
     
     # Get course holes
-    holes = db.execute("SELECT * FROM holes WHERE course_id = ? ORDER BY hole_number ASC", course.id)
+    holes = (Hole.query
+             .filter_by(course_id=course.id)
+             .order_by(Hole.hole_number.asc())
+             .all()
+             )
     # For each hole in holes, get the score for each player in team a and team b, keep track of total par
     total_par = {"front_9_par": 0, "back_9_par": 0, "total_18_par": 0}
+    holes_dicts = []
     for hole in holes:
-        hole["team_a_scores"] = []
-        hole["team_b_scores"] = []
-        for player in team_a_players:
-            player_id = db.execute("SELECT id FROM players WHERE player_name = ? AND group_id = ?", player["player_name"],
-                session["group_id"])[0]["id"]
-            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-                player_id, match.id, hole["hole_number"])
+        hole_dict = {"hole": hole, "team_a_scores": [], "team_b_scores": []}
+        for player in team_a.players:
+            player_id = Player.query.filter(and_(Player.player_name == player.player_name, Player.group_id == session["group_id"])).first().id
+            score = Score.query.filter(and_(Score.player_id == player_id, Score.match_id == match.id, Score.match_hole_number == hole.hole_number)).first()
             if score:
-                hole["team_a_scores"].append(score[0]["score"])
+                hole_dict["team_a_scores"].append(score.score)
             else:
-                hole["team_a_scores"].append("-")
-        for player in team_b_players:
-            player_id = db.execute("SELECT id FROM players WHERE player_name = ? AND group_id = ?", player["player_name"],
-                session["group_id"])[0]["id"]
-            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-                player_id, match.id, hole["hole_number"])
+                hole_dict["team_a_scores"].append("-")
+        for player in team_b.players:
+            player_id = Player.query.filter(and_(Player.player_name == player.player_name, Player.group_id == session["group_id"])).first().id
+            score = Score.query.filter(and_(Score.player_id == player_id, Score.match_id == match.id, Score.match_hole_number == hole.hole_number)).first()
             if score:
-                hole["team_b_scores"].append(score[0]["score"])
+                hole_dict["team_b_scores"].append(score.score)
             else:
-                hole["team_b_scores"].append("-")
+                hole_dict["team_b_scores"].append("-")
+        holes_dicts.append(hole_dict)
         # Sum par for front 9, back 9, and total 18 holes
         if hole["hole_number"] < 10:
             total_par["front_9_par"] += hole["par"]
@@ -979,20 +1012,7 @@ def scorecard():
 
 
     # Calculate player totals for front 9, back 9, and total 18 holes
-    for player in team_a_players:
-        player["front_9_total"] = 0
-        player["back_9_total"] = 0
-        player["total_18"] = 0
-        for i in range(1, 19):
-            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-                player["id"], match_id, i)
-            if score:
-                if i < 10:
-                    player["front_9_total"] += score[0]["score"]
-                else:
-                    player["back_9_total"] += score[0]["score"]
-                player["total_18"] += score[0]["score"]
-    for player in team_b_players:
+    for player in team_a.players:
         player["front_9_total"] = 0
         player["back_9_total"] = 0
         player["total_18"] = 0
@@ -1005,13 +1025,19 @@ def scorecard():
                 else:
                     player["back_9_total"] += score[0]["score"]
                 player["total_18"] += score[0]["score"]
- 
-    # Collect team data for scorecard
-    team_data = {"team_a_name": team_a_name, 
-                 "team_a_players": team_a_players, 
-                 "team_b_name": team_b_name, 
-                 "team_b_players": team_b_players
-                 }
+    for player in team_b.players:
+        player["front_9_total"] = 0
+        player["back_9_total"] = 0
+        player["total_18"] = 0
+        for i in range(1, 19):
+            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
+                player["id"], match.id, i)
+            if score:
+                if i < 10:
+                    player["front_9_total"] += score[0]["score"]
+                else:
+                    player["back_9_total"] += score[0]["score"]
+                player["total_18"] += score[0]["score"]
     
     return render_template("scorecard.html", 
                            event_name=event_name, 
