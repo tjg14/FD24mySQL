@@ -113,6 +113,9 @@ class CourseTee(db.Model):
     rating = db.Column(db.Float, nullable=False)
     slope = db.Column(db.Integer, nullable=False)
     active = db.Column(db.Integer, nullable=False, server_default="1")
+    front_9_par = db.Column(db.Integer, nullable=False)
+    back_9_par = db.Column(db.Integer, nullable=False)
+    total_18_par = db.Column(db.Integer, nullable=False)
 
 class Hole(db.Model):
     __tablename__ = 'holes'
@@ -958,8 +961,6 @@ def scorecard():
     course = CourseTee.query.get(match.course_id)
     if not course:
         return apology("Course not found")
-
-    course_display_name = course.name + " - " + course.teebox + " Tees"
     
     # Get team and player names for match
     team_a = Team.query.options(joinedload(Team.players)).get(match.team_a_id)
@@ -972,10 +973,22 @@ def scorecard():
 
     team_data = {
         "team_a_name": team_a.team_name, 
-        "team_a_players": team_a.players, 
+        "team_a_players": [{**player.__dict__} for player in team_a.players], 
         "team_b_name": team_b.team_name, 
-        "team_b_players": team_b.players
+        "team_b_players": [{**player.__dict__} for player in team_b.players]
     }
+    
+    # Add handicap for each player on team a and team b
+    for player in [team_data["team_a_players"], team_data["team_b_players"]]:
+        hcp_index = (Handicap.query
+                     .filter_by(player_id=player["id"], event_id=session["event_id"])
+                     .first()
+                     .player_hcp
+                    )
+        course_hcp = hcp_index * course.slope / 113 + (course.rating - course.total_18_par)
+        playing_hcp = min(round(course_hcp * 0.85, 0), 18)
+        player["hcp"] = playing_hcp
+        
     
     # Get course holes
     holes = (Hole.query
@@ -983,68 +996,79 @@ def scorecard():
              .order_by(Hole.hole_number.asc())
              .all()
              )
-    # For each hole in holes, get the score for each player in team a and team b, keep track of total par
-    total_par = {"front_9_par": 0, "back_9_par": 0, "total_18_par": 0}
+    # For each hole in holes, get the score for each player in team a and team b
+    
     holes_dicts = []
     for hole in holes:
-        hole_dict = {"hole": hole, "team_a_scores": [], "team_b_scores": []}
-        for player in team_a.players:
-            player_id = Player.query.filter(and_(Player.player_name == player.player_name, Player.group_id == session["group_id"])).first().id
-            score = Score.query.filter(and_(Score.player_id == player_id, Score.match_id == match.id, Score.match_hole_number == hole.hole_number)).first()
+        hole_dict = {**hole.__dict__, 
+                     "team_a_scores": [], 
+                     "team_a_net": None,
+                     "team_b_scores": [],
+                     "team_b_net": None
+                     }
+        hole_hcp = hole["hole_hcp"]
+        if not hole_hcp:
+            return apology("Missing hole hcp reference")
+        for player in team_data["team_a_players"]:
+            player_id =  player.id
+            strokes = 1 if player["hcp"] <= hole_hcp else 0
+            score = (Scores.query
+                     .filter_by(player_id=player_id, match_id=match.id, match_hole_number=hole.hole_number)
+                     .first()
+                     )
             if score:
                 hole_dict["team_a_scores"].append(score.score)
+                new_team_a_net = score.score - strokes
+                if hole_dict["team_a_net"] is None:
+                    hole_dict["team_a_net"] = new_team_a_net
+                elif new_team_a_net < hole_dict["team_a_net"]:
+                    hole_dict["team_a_net"] = new_team_a_net
             else:
-                hole_dict["team_a_scores"].append("-")
-        for player in team_b.players:
-            player_id = Player.query.filter(and_(Player.player_name == player.player_name, Player.group_id == session["group_id"])).first().id
-            score = Score.query.filter(and_(Score.player_id == player_id, Score.match_id == match.id, Score.match_hole_number == hole.hole_number)).first()
+                hole_dict["team_a_scores"].append(0)
+        for player in team_data["team_b_players"]:
+            player_id =  player.id
+            strokes = 1 if player["hcp"] <= hole_hcp else 0
+            score = (Scores.query
+                     .filter_by(player_id=player_id, match_id=match.id, match_hole_number=hole.hole_number)
+                     .first()
+                     )
             if score:
                 hole_dict["team_b_scores"].append(score.score)
+                new_team_b_net = score.score - strokes
+                if hole_dict["team_b_net"] is None:
+                    hole_dict["team_b_net"] = new_team_b_net
+                elif new_team_b_net < hole_dict["team_b_net"]:
+                    hole_dict["team_b_net"] = new_team_b_net
             else:
-                hole_dict["team_b_scores"].append("-")
+                hole_dict["team_b_scores"].append(0)
         holes_dicts.append(hole_dict)
-        # Sum par for front 9, back 9, and total 18 holes
-        if hole["hole_number"] < 10:
-            total_par["front_9_par"] += hole["par"]
-        else:
-            total_par["back_9_par"] += hole["par"]
-        total_par["total_18_par"] += hole["par"]
 
 
     # Calculate player totals for front 9, back 9, and total 18 holes
-    for player in team_a.players:
+    for player in [team_data["team_a_players"], team_data["team_b_players"]]:
         player["front_9_total"] = 0
         player["back_9_total"] = 0
         player["total_18"] = 0
         for i in range(1, 19):
-            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-                player["id"], match.id, i)
+            score = (Scores.query
+                     .filter_by(player_id=player["id"], 
+                                match_id=match.id, 
+                                match_hole_number=i)
+                     .first()
+                    )
             if score:
                 if i < 10:
-                    player["front_9_total"] += score[0]["score"]
+                    player["front_9_total"] += score.score
                 else:
-                    player["back_9_total"] += score[0]["score"]
-                player["total_18"] += score[0]["score"]
-    for player in team_b.players:
-        player["front_9_total"] = 0
-        player["back_9_total"] = 0
-        player["total_18"] = 0
-        for i in range(1, 19):
-            score = db.execute("SELECT score FROM scores WHERE player_id = ? AND match_id = ? AND match_hole_number = ?", 
-                player["id"], match.id, i)
-            if score:
-                if i < 10:
-                    player["front_9_total"] += score[0]["score"]
-                else:
-                    player["back_9_total"] += score[0]["score"]
-                player["total_18"] += score[0]["score"]
-    
+                    player["back_9_total"] += score.score
+                player["total_18"] += score.score
+
     return render_template("scorecard.html", 
                            event_name=event_name, 
-                           course_display_name=course_display_name,
+                           course=course,
                            round_number=round_number, 
                            match_data=match_data, 
-                           holes=holes, 
+                           holes=holes_dicts, 
                            team_data=team_data, 
                            total_par=total_par
                            )

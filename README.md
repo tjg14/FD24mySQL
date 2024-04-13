@@ -25,6 +25,9 @@ CREATE TABLE course_tee (
     teebox VARCHAR(10) NOT NULL,
     rating DECIMAL(4, 1) NOT NULL,
     slope DECIMAL(3, 0) NOT NULL,
+    front_9_par INT NOT NULL,
+    back_9_par INT NOT NULL,
+    total_18_par INT NOT NULL,
     active INT NOT NULL DEFAULT 1
 );
 
