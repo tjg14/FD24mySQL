@@ -1193,7 +1193,7 @@ def scorecard():
             team_b_net_totals["total_18"] += hole["team_b_net"]
 
 
-    return render_template("scorecard.html", 
+    return render_template("scorecard_view.html", 
                            event_name=event_name, 
                            course=course,
                            round_number=round_number, 
