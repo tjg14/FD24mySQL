@@ -1,121 +1,35 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Scorecard
+    Leaderboard
 {% endblock %}
 
 {% block main %}
-    <h1>Scorecard</h1>
+    <h1>Leaderboard</h1>
     <div class="mb-3">
         <p><b>Event Name:</b> {{ event_name }}</p>
-        <p><b>Course:</b> {{ course.name }} - {{ course.teebox }} Tees</p>
-        <p><b>Round Number:</b> {{ round_number }}</p>
-        <p><b>Match Number:</b> {{ match_data.match_number }}</p>
     </div>
 
-    <table class="table table-hover table-striped" id="scorecard_table">
-        <thead id="scorecard_header">
+    <table class="table table-hover table-striped">
+        <thead >
             <tr>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th colspan="3">{{ team_data.team_a_name }}</th>
-                <th colspan="3">{{ team_data.team_b_name }}</th>
-            </tr>
-            <tr>
-                <th>#</th>
-                <th>Par</th>
-                <th>Hcp</th>
-                <th>{{ team_data.team_a_players[0].player_name }}</th>
-                <th>{{ team_data.team_a_players[1].player_name }}</th>
-                <th>Net Best Ball</th>
-                <th>{{ team_data.team_b_players[0].player_name }}</th>
-                <th>{{ team_data.team_b_players[1].player_name }}</th>
-                <th>Net Best Ball</th>
-            </tr>
-            <tr>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th>
-                    <form action="/scorecard_edit" method="post">
-                        <input type="hidden" name="player_id" value="{{ team_data.team_a_players[0].id }}">
-                        <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
-                        <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">Edit</button>
-                    </form>
-                </th>
-                <th>
-                    <form action="/scorecard_edit" method="post">
-                        <input type="hidden" name="player_id" value="{{ team_data.team_a_players[1].id }}">
-                        <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
-                        <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">Edit</button>
-                    </form>
-                </th>
-                <th></th>
-                <th>
-                    <form action="/scorecard_edit" method="post">
-                        <input type="hidden" name="player_id" value="{{ team_data.team_b_players[0].id}}">
-                        <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
-                        <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">Edit</button>
-                    </form>
-                </th>
-                <th>
-                    <form action="/scorecard_edit" method="post">
-                        <input type="hidden" name="player_id" value="{{ team_data.team_b_players[1].id }}">
-                        <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
-                        <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">Edit</button>
-                    </form>
-                </th>
-                <th></th>
+                <th>Teams</th>
+                {% for round in rounds_data %}
+                    <th>R{{ round.round_number }}</th>
+                {% endfor %}
+                <th>Total</th>
             </tr>
         </thead>
-        <tbody id="scorecard_body">
-            {% for hole in holes %}
+        <tbody>
+            {% for team in teams %}
                 <tr>
-                    <td>{{ hole.hole_number }}</td>
-                    <td>{{ hole.par }}</td>
-                    <td>{{ hole.hole_hcp }}</td>
-                    <td>{{ hole.team_a_scores[0] }}</td>
-                    <td>{{ hole.team_a_scores[1] }}</td>
-                    <td>{{ format_positive(hole.team_a_net) }}</td>
-                    <td>{{ hole.team_b_scores[0] }}</td>
-                    <td>{{ hole.team_b_scores[1] }}</td>
-                    <td>{{format_positive(hole.team_b_net) }}</td>
+                    <td>{{ team.team_name }}</td>
+                    {% for round in rounds_data %}
+                        <td>{{ round.team_data.get(team.team_name, '-') }}</td>
+                    {% endfor %}
+                    <td>{{ cumulative_totals.get(team.team_name, '-') }}</td>
                 </tr>
             {% endfor %}
-            <tr>
-                <td>F9</td>
-                <td>{{ course.front_9_par }}</td>
-                <td></td>
-                <td>{{ format_none(team_data.team_a_players[0].front_9_total) }}</td>
-                <td>{{ format_none(team_data.team_a_players[1].front_9_total) }}</td>
-                <td>{{ format_positive(team_a_net_totals.front_9) }}</td>
-                <td>{{ format_none(team_data.team_b_players[0].front_9_total) }}</td>
-                <td>{{ format_none(team_data.team_b_players[1].front_9_total) }}</td>
-                <td>{{ format_positive(team_b_net_totals.front_9) }}</td>
-            </tr>
-            <tr>
-                <td>B9</td>
-                <td>{{ course.back_9_par }}</td>
-                <td></td>
-                <td>{{ format_none(team_data.team_a_players[0].back_9_total) }}</td>
-                <td>{{ format_none(team_data.team_a_players[1].back_9_total) }}</td>
-                <td>{{ format_positive(team_a_net_totals.back_9) }}</td>
-                <td>{{ format_none(team_data.team_b_players[0].back_9_total) }}</td>
-                <td>{{ format_none(team_data.team_b_players[1].back_9_total) }}</td>
-                <td>{{ format_positive(team_b_net_totals.back_9) }}</td>
-            </tr>
-            <tr>
-                <td>Tot</td>
-                <td>{{ course.total_18_par }}</td>
-                <td></td>
-                <td>{{ format_none(team_data.team_a_players[0].total_18) }}</td>
-                <td>{{ format_none(team_data.team_a_players[1].total_18) }}</td>
-                <td>{{ format_positive(team_a_net_totals.total_18) }}</td>
-                <td>{{ format_none(team_data.team_b_players[0].total_18) }}</td>
-                <td>{{ format_none(team_data.team_b_players[1].total_18) }}</td>
-                <td>{{ format_positive(team_b_net_totals.total_18) }}</td>
-            </tr>
         </tbody>
     </table>
 {% endblock %}
