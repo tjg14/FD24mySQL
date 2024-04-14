@@ -10,7 +10,7 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import logging
 
-from helpers import apology, login_required, group_login_required, event_selected, usd
+from helpers import apology, login_required, group_login_required, event_selected, usd, format_positive, format_none
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -806,14 +806,88 @@ def event_structure():
 @group_login_required
 @event_selected
 def event_scoreboard():
-    """Event Scoreboard
-    TODO
+    """Event Scoreboard"""
   
-    overall scoreboard
+    # Get event name
+    event = Event.query.get(session["event_id"])
+    if not event:
+        return apology("Event not found")
+    event_name = event.event_name
+
+    # Get all rounds for the event
+    rounds = (Round.query
+              .filter_by(event_id=session["event_id"])
+              .order_by(Round.round_number)
+              .all())
+    if not rounds:
+        return apology("No Rounds Found")
     
-    """
-  
-    return apology("To Do Event Scoreboard")
+    # Get all teams and players for the event
+    teams = (Team.query
+             .filter_by(event_id=session["event_id"])
+             .options(joinedload(Team.players))
+             .all())
+    
+    # Get all matches for the rounds in the event
+    matches = (Match.query
+               .filter(Match.round_id.in_([round.id for round in rounds]))
+               .all())
+
+    # Get all courses played in all the matches in the event's rounds
+    courses = (CourseTee.query
+                .filter(CourseTee.id.in_([match.course_id for match in matches]))
+                .all())
+    
+
+    # for round in rounds:
+    # for team in teams:
+    # for each hole in holes:
+    # get hole hcp
+    # for each player in team:
+    # get player hcp
+    # calculate player strokes
+    # get player score (needs match id, hole number, player id)
+    # get player net score
+    # calculate total net score for team
+
+    # For each round in rounds
+    for round in rounds:
+        # For each team in teams
+        for team in teams:
+            # Initialize total net score for team
+            team_total_net_score = 0
+            # For each hole in holes
+            for hole in round.holes:
+                # Get hole hcp
+                hole_hcp = hole.hcp
+                # For each player in team
+                for player in team.players:
+                    # Get player hcp
+                    player_hcp = player.hcp
+                    # Calculate player strokes
+                    player_strokes = hole.hcp - player.hcp if hole.hcp > player.hcp else 0
+                    # Get player score (needs match id, hole number, player id)
+                    score = Scores.query.filter_by(match_id=round.id, hole_number=hole.hole_number, player_id=player.id).first()
+                    if score:
+                        player_score = score.score
+                    else:
+                        player_score = None
+                    # Get player net score
+                    if player_score is not None:
+                        player_net_score = player_score - player_strokes
+                    else:
+                        player_net_score = None
+                    # Calculate total net score for team
+                    if player_net_score is not None:
+                        team_total_net_score += player_net_score
+            # Store the total net score for the team in the round
+            round.team_total_net_scores[team.id] = team_total_net_score
+
+
+    
+    return render_template("leaderboard.html",
+                           event_name=event_name,
+    )
 
 @app.route("/courseadmin", methods=["GET", "POST"])
 @login_required
@@ -946,8 +1020,13 @@ def scorecard():
     if not round:
         return apology("Round not found")
 
-    # Find match in round returned
-    match = next((m for m in round.matches if m.match_number == match_number), None)
+   # Print out round.matches and match_number for debugging
+    print("round.matches:", [m.match_number for m in round.matches])
+    print("match_number:", match_number)
+
+   
+   # Find match in round returned
+    match = next((m for m in round.matches if m.match_number == int(match_number)), None)
     if not match:
         return apology("Match not found")
 
@@ -978,16 +1057,28 @@ def scorecard():
         "team_b_players": [{**player.__dict__} for player in team_b.players]
     }
     
+    # Get scores for all players in the match
+    scores = (Scores.query
+              .filter(Scores.player_id.in_([p.id for p in team_a.players + team_b.players]), 
+                      Scores.match_id == match.id)
+              .all()
+             )
+    # Create a dictionary to easily look up scores
+    scores_dict = {(s.player_id, s.match_hole_number): s for s in scores}
+
     # Add handicap for each player on team a and team b
-    for player in [team_data["team_a_players"], team_data["team_b_players"]]:
+    for player in team_data["team_a_players"] + team_data["team_b_players"]:
         hcp_index = (Handicap.query
                      .filter_by(player_id=player["id"], event_id=session["event_id"])
                      .first()
                      .player_hcp
                     )
-        course_hcp = hcp_index * course.slope / 113 + (course.rating - course.total_18_par)
-        playing_hcp = min(round(course_hcp * 0.85, 0), 18)
+        course_hcp = hcp_index * float(course.slope) / 113 + (course.rating - course.total_18_par)
+        playing_hcp = int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))
         player["hcp"] = playing_hcp
+        player["front_9_total"] = 0
+        player["back_9_total"] = 0
+        player["total_18"] = 0
         
     
     # Get course holes
@@ -996,8 +1087,8 @@ def scorecard():
              .order_by(Hole.hole_number.asc())
              .all()
              )
-    # For each hole in holes, get the score for each player in team a and team b
     
+    # For each hole in holes, get the score for each player in team a and team b
     holes_dicts = []
     for hole in holes:
         hole_dict = {**hole.__dict__, 
@@ -1006,62 +1097,55 @@ def scorecard():
                      "team_b_scores": [],
                      "team_b_net": None
                      }
-        hole_hcp = hole["hole_hcp"]
+        hole_hcp = int(hole_dict["hole_hcp"])
+        hole_par = int(hole_dict["par"])
         if not hole_hcp:
             return apology("Missing hole hcp reference")
-        for player in team_data["team_a_players"]:
-            player_id =  player.id
-            strokes = 1 if player["hcp"] <= hole_hcp else 0
-            score = (Scores.query
-                     .filter_by(player_id=player_id, match_id=match.id, match_hole_number=hole.hole_number)
-                     .first()
-                     )
-            if score:
-                hole_dict["team_a_scores"].append(score.score)
-                new_team_a_net = score.score - strokes
-                if hole_dict["team_a_net"] is None:
-                    hole_dict["team_a_net"] = new_team_a_net
-                elif new_team_a_net < hole_dict["team_a_net"]:
-                    hole_dict["team_a_net"] = new_team_a_net
-            else:
-                hole_dict["team_a_scores"].append(0)
-        for player in team_data["team_b_players"]:
-            player_id =  player.id
-            strokes = 1 if player["hcp"] <= hole_hcp else 0
-            score = (Scores.query
-                     .filter_by(player_id=player_id, match_id=match.id, match_hole_number=hole.hole_number)
-                     .first()
-                     )
-            if score:
-                hole_dict["team_b_scores"].append(score.score)
-                new_team_b_net = score.score - strokes
-                if hole_dict["team_b_net"] is None:
-                    hole_dict["team_b_net"] = new_team_b_net
-                elif new_team_b_net < hole_dict["team_b_net"]:
-                    hole_dict["team_b_net"] = new_team_b_net
-            else:
-                hole_dict["team_b_scores"].append(0)
+        
+        
+        team_players_keys = [
+            (team_data["team_a_players"], "team_a"), 
+            (team_data["team_b_players"], "team_b")
+        ]
+        for team_players, team_key in team_players_keys:
+            for player in team_players:
+                score = scores_dict.get((player["id"], hole.hole_number))
+                strokes = 1 if player["hcp"] >= hole_hcp else 0
+                if score:
+                    hole_dict[f"{team_key}_scores"].append(score.score)
+                    new_net = score.score - strokes - hole_par
+                    team_net = hole_dict[f"{team_key}_net"]
+                    if team_net is None or new_net < team_net:
+                        hole_dict[f"{team_key}_net"] = new_net
+                    # Calculate player totals
+                    if hole.hole_number < 10:
+                        player["front_9_total"] += score.score
+                    else:
+                        player["back_9_total"] += score.score
+                    player["total_18"] += score.score
+                else:
+                    hole_dict[f"{team_key}_scores"].append("-")
         holes_dicts.append(hole_dict)
 
+    # Initialize net score totals
+    team_a_net_totals = {"front_9": 0, "back_9": 0, "total_18": 0}
+    team_b_net_totals = {"front_9": 0, "back_9": 0, "total_18": 0}
 
-    # Calculate player totals for front 9, back 9, and total 18 holes
-    for player in [team_data["team_a_players"], team_data["team_b_players"]]:
-        player["front_9_total"] = 0
-        player["back_9_total"] = 0
-        player["total_18"] = 0
-        for i in range(1, 19):
-            score = (Scores.query
-                     .filter_by(player_id=player["id"], 
-                                match_id=match.id, 
-                                match_hole_number=i)
-                     .first()
-                    )
-            if score:
-                if i < 10:
-                    player["front_9_total"] += score.score
-                else:
-                    player["back_9_total"] += score.score
-                player["total_18"] += score.score
+    # Calculate net score totals
+    for hole in holes_dicts:
+        if hole["team_a_net"] is not None:
+            if hole["hole_number"] <= 9:
+                team_a_net_totals["front_9"] += hole["team_a_net"]
+            else:
+                team_a_net_totals["back_9"] += hole["team_a_net"]
+            team_a_net_totals["total_18"] += hole["team_a_net"]
+        if hole["team_b_net"] is not None:
+            if hole["hole_number"] <= 9:
+                team_b_net_totals["front_9"] += hole["team_b_net"]
+            else:
+                team_b_net_totals["back_9"] += hole["team_b_net"]
+            team_b_net_totals["total_18"] += hole["team_b_net"]
+
 
     return render_template("scorecard.html", 
                            event_name=event_name, 
@@ -1069,8 +1153,11 @@ def scorecard():
                            round_number=round_number, 
                            match_data=match_data, 
                            holes=holes_dicts, 
-                           team_data=team_data, 
-                           total_par=total_par
+                           team_data=team_data,
+                           format_positive=format_positive,
+                           format_none=format_none,
+                           team_a_net_totals=team_a_net_totals,
+                           team_b_net_totals=team_b_net_totals
                            )
     
     

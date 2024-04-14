@@ -61,4 +61,18 @@ def usd(value):
     """Format value as USD."""
     return f"${value:,.2f}"
 
-
+def format_positive(number):
+    """Format positive numbers with a plus sign, or a dash if the number is None."""
+    if number is None:
+        return "-"
+    elif number == 0:
+        return "E"
+    else:
+        return f"+{number}" if number > 0 else str(number)
+    
+def format_none(number):
+    """Format dash if the number is None."""
+    if number is None:
+        return "-"
+    else:
+        return number
