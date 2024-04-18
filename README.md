@@ -114,3 +114,13 @@ CREATE TABLE scores (
     FOREIGN KEY (player_id) REFERENCES players(id)
     PRIMARY KEY (match_id, match_hole_number, player_id)
 );
+
+CREATE TABLE presses (
+    match_id INT NOT NULL,
+    match_hole_number INT NOT NULL,
+    front_9_bets INT,
+    back_9_bets INT,
+    total_18_bets INT,
+    FOREIGN KEY (match_id) REFERENCES matches(id),
+    PRIMARY KEY (match_id, match_hole_number)
+);
