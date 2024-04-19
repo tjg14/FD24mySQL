@@ -713,8 +713,10 @@ def event_structure():
         if not course_id_selected:
             return apology("No course selected")
         
-        round_number = int(request.form.get("num_rounds_input")) + 1
-        if not round_number:
+        num_rounds_input = request.form.get("num_rounds_input")
+        if num_rounds_input is not None:
+            round_number = int(num_rounds_input) + 1
+        else:
             return apology("Round number not sent in POST request")
         
         num_teams = Team.query.filter_by(event_id=session["event_id"]).count()
@@ -797,6 +799,9 @@ def event_structure():
         event_name = Event.query.filter_by(id=session["event_id"]).first().event_name
         teams = Team.query.filter_by(event_id=session["event_id"]).all()
 
+        if not rounds_data:
+            return apology("No rounds found")
+        
         return render_template("event_structure.html", 
                                rounds=rounds_data, 
                                num_teams=num_teams, 
