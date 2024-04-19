@@ -96,6 +96,32 @@ input[type="number"].scorecard_cell::-webkit-outer-spin-button {
     z-index: 1;
 }
 
+.round-header {
+    background-color: #315139; 
+    color: white; 
+    border-top: 2px solid #6c757d; 
+    border-bottom: 2px solid #164426; 
+    font-weight: bold; 
+}
+
+.round-header-text {
+    color: white !important; 
+}
+
+.match-header {
+    background-color: #e1ece3; 
+    color: white; 
+    border-top: 1px solid #d4d4d4; 
+    border-bottom: 1px solid #d4d4d4; 
+    font-weight: bold; 
+}
+
+.round-footer {
+    margin-bottom: 10px; 
+    border-bottom: 2px solid #000; 
+}
+
+
 
 @media (max-width: 700px) {
     td span {

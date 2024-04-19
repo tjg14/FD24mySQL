@@ -17,42 +17,38 @@
                 <input class="team_names" type="hidden" name="team_{{ loop.index }}" data-id="{{ team.id }}" value="{{ team.team_name }}">
             {% endfor %}
         </div>
+
         <br>
+
         <div class="mx-auto" id="event_structure_table">
             <h2>Event Rounds & Matches</h2>
             <br>
-            <table class="table table-hover table-striped" >
-                <thead>
+            <table class="table table-hover table-striped">
+                <!-- <thead>
                     <tr class="table-primary">
                         <th>Rounds & Matches</th>
                         <th>Team Scores</th>
                         <th>Edit??</th>
                     </tr>
-                </thead>
+                </thead> -->
                 <tbody id="rounds_table">
                     {% for round in rounds %}
-                        <tr>
-                            <td colspan="2">RD{{ round.round_number }} {{ round.round_name}}</td>
-                            <td>
-                                <span>
-                                    Edit
-                                </span>
-                                <span>
-                                    Delete
-                                </span>
+                        
+                        <tr class="round-header">
+                            <td class="round-header-text" colspan="2">RD{{ round.round_number }} {{ round.round_name}}</td>
+                            <td class="round-header-text">
+                                <span>Edit</span>
+                                <span>Delete</span>
                             </td>
                         </tr>
+                        
                         {%  for match in round.matches %}
-                            {% if loop.first %}    
-                                <tr>
-                                <!--If this is the first match in the round, display the course name..
-                                save functionality for later if needed different courses within one round-->
-                                
-                                    <td colspan="3">Course: {{ match.course_name }}</td>
-                                
-                                </tr> 
-                            {% endif %} 
                             <tr>
+                                {% if loop.first %}
+                                    <td colspan="3">Course: {{ match.course_name }}</td>
+                                {% endif %}
+                            </tr>  
+                            <tr class="match-header">
                                 <td colspan="2">Match {{ match.match_number }}</td>
                                 <td>
                                     <form action="/scorecard" method="post">
@@ -63,34 +59,29 @@
                                 </td>
                             </tr>
                             <tr>
-                                <td>
-                                    {{ match.team_a }}
-                                </td>
-                                <td>
-                                    {{ match.team_a_score }}
-                                </td>
+                                <td>{{ match.team_a }}</td>
+                                <td>{{ match.team_a_score }}</td>
                                 <td></td>
                             </tr>
                             <tr>
-                                <td>
-                                    {{ match.team_b }}
-                                </td>
-                                <td>
-                                    {{ match.team_b_score }}
-                                </td>
+                                <td>{{ match.team_b }}</td>
+                                <td>{{ match.team_b_score }}</td>
                                 <td></td>
                             </tr>
-                        {% endfor %}    
+                        {% endfor %}
+                        <tr class="round-footer"></tr>
                     {% endfor %}
-                    
                 </tbody>
             </table>
+
             <form action="/event_structure" method="post" id="event_details_form">
                 <table class="table table-hover table-striped" id="new_round_table">
                     <tbody></tbody>
                 </table>
             </form>
+
         </div>
+        
         <div>
             <button class="btn btn-primary" id = "add_round_btn">Add New Round </button>
         </div>
@@ -135,7 +126,8 @@
 
             let newRoundRow = roundsTable.insertRow();
             let newCell = newRoundRow.insertCell(0);
-            newCell.innerHTML = "New Round";
+            newCell.innerHTML = "New Round Input";
+            newCell.style.fontWeight = "bold";
             let newCell2 = newRoundRow.insertCell(1);
             newCell2.colSpan = 2;
             let newInput = document.createElement("input");
