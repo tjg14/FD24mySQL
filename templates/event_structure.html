@@ -11,8 +11,7 @@
         <div class="mb-3">
             <p><b>Event Name:</b> {{ event_name }}</p>
             <p><b>Number of teams:</b> {{ num_teams }}</p>
-            <input type="hidden" name="num_teams" value="{{ num_teams }}">
-            <input type="hidden" name="num_rounds_input" value="{{ rounds|length }}">
+
             {% for team in teams %}
                 <input class="team_names" type="hidden" name="team_{{ loop.index }}" data-id="{{ team.id }}" value="{{ team.team_name }}">
             {% endfor %}
@@ -75,6 +74,8 @@
             </table>
 
             <form action="/event_structure" method="post" id="event_details_form">
+                <input type="hidden" name="num_teams" value="{{ num_teams }}">
+                <input type="hidden" name="num_rounds_input" value="{{ rounds|length }}">
                 <table class="table table-hover table-striped" id="new_round_table">
                     <tbody></tbody>
                 </table>
