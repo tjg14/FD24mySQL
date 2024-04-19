@@ -7,95 +7,101 @@
 {% block main %}
     <br>
     <div class="mx-auto">
-        <form action="/event_structure" method="post" id="event_details_form">   
-            <div class="mb-3">
-                <p><b>Event Name:</b> {{ event_name }}</p>
-                <p><b>Number of teams:</b> {{ num_teams }}</p>
-                <input type="hidden" name="num_teams" value="{{ num_teams }}">
-                <input type="hidden" name="num_rounds_input" value="{{ rounds|length }}">
-                {% for team in teams %}
-                    <input class="team_names" type="hidden" name="team_{{ loop.index }}" data-id="{{ team.id }}" value="{{ team.team_name }}">
-                {% endfor %}
-            </div>
+           
+        <div class="mb-3">
+            <p><b>Event Name:</b> {{ event_name }}</p>
+            <p><b>Number of teams:</b> {{ num_teams }}</p>
+            <input type="hidden" name="num_teams" value="{{ num_teams }}">
+            <input type="hidden" name="num_rounds_input" value="{{ rounds|length }}">
+            {% for team in teams %}
+                <input class="team_names" type="hidden" name="team_{{ loop.index }}" data-id="{{ team.id }}" value="{{ team.team_name }}">
+            {% endfor %}
+        </div>
+        <br>
+        <div class="mx-auto" id="event_structure_table">
+            <h2>Event Rounds & Matches</h2>
             <br>
-            <div class="mx-auto" id="event_structure_table">
-                <h2>Event Rounds & Matches</h2>
-                <br>
-                <table class="table table-hover table-striped" >
-                    <thead>
-                        <tr class="table-primary">
-                            <th>Rounds & Matches</th>
-                            <th>Team Scores</th>
-                            <th>Edit??</th>
+            <table class="table table-hover table-striped" >
+                <thead>
+                    <tr class="table-primary">
+                        <th>Rounds & Matches</th>
+                        <th>Team Scores</th>
+                        <th>Edit??</th>
+                    </tr>
+                </thead>
+                <tbody id="rounds_table">
+                    {% for round in rounds %}
+                        <tr>
+                            <td colspan="2">RD{{ round.round_number }} {{ round.round_name}}</td>
+                            <td>
+                                <span>
+                                    Edit
+                                </span>
+                                <span>
+                                    Delete
+                                </span>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody id="rounds_table">
-                        {% for round in rounds %}
+                        {%  for match in round.matches %}
+                            {% if loop.first %}    
+                                <tr>
+                                <!--If this is the first match in the round, display the course name..
+                                save functionality for later if needed different courses within one round-->
+                                
+                                    <td colspan="3">Course: {{ match.course_name }}</td>
+                                
+                                </tr> 
+                            {% endif %} 
                             <tr>
-                                <td colspan="2">RD{{ round.round_number }} {{ round.round_name}}</td>
+                                <td colspan="2">Match {{ match.match_number }}</td>
                                 <td>
-                                    <span>
-                                        Edit
-                                    </span>
-                                    <span>
-                                        Delete
-                                    </span>
+                                    <form action="/scorecard" method="post">
+                                        <input type="hidden" name="round_number" value="{{ round.round_number }}">
+                                        <input type="hidden" name="match_number" value="{{ match.match_number }}">
+                                        <button type="submit" class="btn btn-link scorecard-link" style="color: green; text-decoration: underline;">Scorecard</button>
+                                    </form>
                                 </td>
                             </tr>
-                            {%  for match in round.matches %}
-                                {% if loop.first %}    
-                                    <tr>
-                                    <!--If this is the first match in the round, display the course name..
-                                    save functionality for later if needed different courses within one round-->
-                                    
-                                        <td colspan="3">Course: {{ match.course_name }}</td>
-                                    
-                                    </tr> 
-                                {% endif %} 
-                                <tr>
-                                    <td colspan="2">Match {{ match.match_number }}</td>
-                                    <td>
-                                        <form action="/scorecard" method="post">
-                                            <input type="hidden" name="round_number" value="{{ round.round_number }}">
-                                            <input type="hidden" name="match_number" value="{{ match.match_number }}">
-                                            <button type="submit" class="btn btn-link scorecard-link" style="color: green; text-decoration: underline;">Scorecard</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        {{ match.team_a }}
-                                    </td>
-                                    <td>
-                                        {{ match.team_a_score }}
-                                    </td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        {{ match.team_b }}
-                                    </td>
-                                    <td>
-                                        {{ match.team_b_score }}
-                                    </td>
-                                    <td></td>
-                                </tr>
-                            {% endfor %}    
-                        {% endfor %}
-                    </tbody>
+                            <tr>
+                                <td>
+                                    {{ match.team_a }}
+                                </td>
+                                <td>
+                                    {{ match.team_a_score }}
+                                </td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    {{ match.team_b }}
+                                </td>
+                                <td>
+                                    {{ match.team_b_score }}
+                                </td>
+                                <td></td>
+                            </tr>
+                        {% endfor %}    
+                    {% endfor %}
+                    
+                </tbody>
+            </table>
+            <form action="/event_structure" method="post" id="event_details_form">
+                <table class="table table-hover table-striped" id="new_round_table">
+                    <tbody></tbody>
                 </table>
-            </div>
-            <div>
-                <button class="btn btn-primary" id = "add_round_btn">Add New Round </button>
-            </div>
-            <div>
-                <button class="btn btn-primary" id = "submit_round_btn" style="display: none;"> Save Round </button>
-            </div>
-        </form>
+            </form>
+        </div>
+        <div>
+            <button class="btn btn-primary" id = "add_round_btn">Add New Round </button>
+        </div>
+        <div>
+            <button class="btn btn-primary" id = "submit_round_btn" style="display: none;"> Save Round </button>
+        </div>
+        
     </div>
     <script>
 
-        let roundsTable = document.getElementById("rounds_table");
+        let roundsTable = document.getElementById("new_round_table");
         let addRoundButton = document.getElementById("add_round_btn");
         let saveRoundButton = document.getElementById("submit_round_btn");
         let num_teams_input = document.querySelector("input[name='num_teams']");
@@ -112,9 +118,6 @@
         });
 
         let scorecardLinks = document.querySelectorAll("button[class='btn btn-link scorecard-link']");
-        console.log(scorecardLinks);
-        console.log(scorecardLinks.length);
-        console.log("testing")
         scorecardLinks.forEach(function(link) {
             link.addEventListener("click", function(event) {
                 event.preventDefault();
