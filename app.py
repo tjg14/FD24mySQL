@@ -10,7 +10,7 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import logging
 
-from helpers import apology, login_required, group_login_required, event_selected, usd, format_positive, format_none
+from helpers import apology, login_required, group_login_required, event_selected, usd, format_positive, format_none, playing_hcp
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -28,21 +28,21 @@ Session(app)
 
 # Confirgure database connection locally
 
-# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
-#     username="root",
-#     password="password123",
-#     hostname="localhost",
-#     databasename="FD2024",
-# )
+SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
+    username="root",
+    password="password123",
+    hostname="localhost",
+    databasename="FD2024",
+)
 
 
 #Confirgure database connection for pythonanywhere
-SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
-    username="tjg14",
-    password="TJGfd2024",
-    hostname="tjg14.mysql.pythonanywhere-services.com",
-    databasename="tjg14$FD2024",
-)
+# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
+#     username="tjg14",
+#     password="TJGfd2024",
+#     hostname="tjg14.mysql.pythonanywhere-services.com",
+#     databasename="tjg14$FD2024",
+# )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
@@ -79,6 +79,8 @@ class Player(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     player_name = db.Column(db.String(50), nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey("golf_groups.id"), nullable=False)
+
+    handicaps = db.relationship('Handicap', backref='players')
 
 class Event(db.Model):
     __tablename__ = 'events'
@@ -131,9 +133,9 @@ class Handicap(db.Model):
     __tablename__ = 'handicaps'
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    player_id = db.Column(db.Integer, nullable=False)
+    player_id = db.Column(db.Integer, db.ForeignKey("players.id"), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey("events.id"), nullable=False)
-    player_hcp = db.Column(db.Float, db.ForeignKey("players.id"), nullable=False)
+    player_hcp = db.Column(db.Float, nullable=False)
 
 class Round(db.Model):
     __tablename__ = 'rounds'
@@ -1280,32 +1282,50 @@ def scorecard_processing():
         if not match_id or not player_id:
             return apology("Match or player id not sent in POST request")
 
-        # Update the scores table
-        for i in range(1, 19):
-            score = int(request.form.get("score_hole_" + str(i)))
-            if score and score > 0:
-                score_row = (Scores.query
-                             .filter_by(player_id=player_id, 
-                                        match_id=match_id, 
-                                        match_hole_number=i
+        action = request.form.get("action")
+        if not action:
+            return apology("No action sent in POST request")
+
+        if action == "update":
+            # Update the scores table
+            for i in range(1, 19):
+                score = int(request.form.get("score_hole_" + str(i)))
+                if score and score > 0:
+                    score_row = (Scores.query
+                                .filter_by(player_id=player_id, 
+                                            match_id=match_id, 
+                                            match_hole_number=i
+                                            )
+                                .first()
+                                )
+                    if score_row:
+                        score_row.score = score
+                    else:   
+                        new_score = Scores(match_id=match_id, 
+                                        match_hole_number=i, 
+                                        player_id=player_id, 
+                                        score=score
                                         )
-                             .first()
-                            )
-                if score_row:
-                    score_row.score = score
-                else:   
-                    new_score = Scores(match_id=match_id, 
-                                       match_hole_number=i, 
-                                       player_id=player_id, 
-                                       score=score
-                                       )
-                    db.session.add(new_score)
-            else:
-                return apology("Score for hole " + str(i) + 
-                               " must be an integer greater than 0")
-        db.session.commit()
-        
-        return redirect("/scorecard")
+                        db.session.add(new_score)
+                else:
+                    return apology("Score for hole " + str(i) + 
+                                " must be an integer greater than 0")
+            db.session.commit()
+            
+            return redirect("/scorecard")
+        elif action == "clear":
+            # Clear the scores table for player and current match
+            scores = (Scores.query
+                      .filter_by(player_id=player_id, match_id=match_id)
+                      .all()
+                      )
+            for score in scores:
+                db.session.delete(score)
+            db.session.commit()
+            
+            return redirect("/scorecard")
+        else:
+            return apology("Invalid action")
 
     else:
         return redirect("/event_structure")
@@ -1316,16 +1336,30 @@ def scorecard_processing():
 @group_login_required
 @event_selected
 def bets():
- 
-        return render_template("bets.html")
+    return render_template("bets.html")
 
 @app.route('/bets_input', methods=['GET'])
 @login_required
 @group_login_required
 @event_selected
 def bets_input():
- 
-        return apology("Not yet implemented")
+    
+    # Send to template the rounds in the event (id, and number: name)
+    event = Event.query.get(session["event_id"])
+    if not event:
+        return apology("Event not found")
+    rounds = (Round.query
+                .filter_by(event_id=session["event_id"])
+                .all())
+    
+    rounds_data = [{"id": round.id, 
+                    "round_name": "R" + str(round.round_number) + " " + round.round_name} 
+                    for round in rounds]
+
+    return render_template("bets_input.html", 
+                           rounds=rounds_data,
+                           event_name=event.event_name
+                           )
 
 
 @app.route('/bets_results', methods=['GET'])
@@ -1334,4 +1368,158 @@ def bets_input():
 @event_selected
 def betting_results():
  
-        return apology("Not yet implemented")
+    return apology("Not yet implemented")
+
+
+@app.route('/api/matches/<int:round_id>')
+@login_required
+@group_login_required
+@event_selected
+def get_matches(round_id):
+    matches = (Match.query
+               .options(
+                   joinedload(Match.team_a), 
+                   joinedload(Match.team_b)
+                   )
+               .filter_by(round_id=round_id)
+               .all()
+              )
+    matches_data = [{'id': match.id, 
+                    'team_a_name': match.team_a.team_name,
+                    'team_b_name': match.team_b.team_name,
+                     'matchup': f"{match.team_a.team_name} vs. {match.team_b.team_name}"
+                     } 
+                     for match in matches]
+    return jsonify(matches=matches_data)
+
+
+@app.route('/api/match_data/<int:match_id>')
+def get_match_data(match_id):
+    # Get match, team a and team b players and course from match joined load
+    print(match_id)
+    match = (Match.query
+            .options(
+                joinedload(Match.team_a).joinedload(Team.players).joinedload(Player.handicaps), 
+                joinedload(Match.team_b).joinedload(Team.players).joinedload(Player.handicaps), 
+                joinedload(Match.course_tee)
+            )
+            .filter_by(id=match_id)
+            .first()
+            )
+
+    scores = (Scores.query
+                .filter_by(match_id=match_id)
+                .all()
+                )
+    
+    team_a = {
+        "key": "team_a", 
+        "players": [
+            {
+                "id": player.id, 
+                "handicap_index": next(
+                    (
+                        handicap.player_hcp 
+                        for handicap in player.handicaps 
+                        if handicap.event_id == session["event_id"]
+                    ), 
+                    None
+                ),
+                "playing_hcp": None
+            } 
+            for player in match.team_a.players
+        ]
+    }
+    team_b = {
+        "key": "team_b", 
+        "players": [
+            {
+                "id": player.id, 
+                "handicap_index": next(
+                    (
+                        handicap.player_hcp 
+                        for handicap in player.handicaps 
+                        if handicap.event_id == session["event_id"]
+                    ), 
+                    None
+                ),
+                "playing_hcp": None
+            } 
+            for player in match.team_b.players
+        ]
+    }
+
+    course = match.course_tee
+    
+    for team in [team_a, team_b]:
+            # Create a list of dictionaries for each player in the team, and add the player's playing handicap
+            print(team["players"])
+            for player in team["players"]:
+                player_index = player["handicap_index"]
+                if player_index:
+                    player["playing_hcp"] = playing_hcp(player_index, course.slope, course.rating, course.total_18_par)
+                else:
+                    player["playing_hcp"] = None
+
+    
+
+    # Get holes from course_tee
+    holes = (Hole.query
+             .filter_by(course_id=course.id)
+             .order_by(Hole.hole_number)
+             .all()
+            )
+    
+    holes_data = []
+    team_a_net_cumulative = 0
+    team_b_net_cumulative = 0
+    match_net_cumulative = 0
+
+
+    for hole in holes:
+        hole_number = hole.hole_number
+        hole_hcp = hole.hole_hcp
+
+        for team in [team_a, team_b]:
+    
+            # Initialize total net score for team
+            team_total_net_score = 0
+            net_scores_on_hole = []
+            for player in team["players"]:
+                # Get player hcp
+                player_hcp = player["playing_hcp"]
+                # Calculate player strokes
+                player_strokes = 1 if hole_hcp <= player_hcp else 0
+                # Get player net score (needs match id, hole number, player id)
+                score = next((score for score in scores if score.match_hole_number == hole.hole_number and score.player_id == player["id"]), None)
+                if score:
+                    player_net = score.score - player_strokes - hole.par
+                else:
+                    player_net = None
+                # Add to net scores on hole list
+                net_scores_on_hole.append(player_net)
+            # Add lowest of two net scores to team total net score
+            # Filter out None values from net_scores_on_hole
+            filtered_scores = [score for score in net_scores_on_hole if score is not None]
+            if filtered_scores:
+                team_total_net_score += min(filtered_scores)
+                
+            # Update the team cumulative net score
+            if team["key"] == "team_a":
+                team_a_net_cumulative += team_total_net_score
+                match_net_cumulative -= team_total_net_score
+            else:
+                team_b_net_cumulative += team_total_net_score
+                match_net_cumulative += team_total_net_score
+
+        hole_data = {"hole_number": hole_number, 
+                    "team_a_net_cumulative": team_a_net_cumulative, 
+                    "team_b_net_cumulative": team_b_net_cumulative,
+                    "match_net": match_net_cumulative
+                    }
+        holes_data.append(hole_data)
+    
+    for hole in holes_data:
+        print(hole)
+
+    return jsonify(holes=holes_data)

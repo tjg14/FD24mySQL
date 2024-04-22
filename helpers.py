@@ -5,6 +5,7 @@ import requests
 import subprocess
 import urllib
 import uuid
+import math
 
 from flask import redirect, render_template, session
 from functools import wraps
@@ -76,3 +77,8 @@ def format_none(number):
         return "-"
     else:
         return number
+
+def playing_hcp(index, slope, rating, par):
+    """Calculate playing handicap for a player."""
+    course_hcp = index * float(slope) / 113 + (rating - par)
+    return int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))

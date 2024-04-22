@@ -1,3 +1,5 @@
+To do - move complete to events?
+
 
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,

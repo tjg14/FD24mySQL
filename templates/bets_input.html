@@ -1,0 +1,123 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Bets Input
+{% endblock %}
+
+{% block main %}
+    
+    <p><b>Event Name: </b>{{ event_name }}</p>
+    <input type="hidden" name="team_a_name" id="team_a_name">
+    <input type="hidden" name="team_b_name" id="team_b_name">
+
+    <b>Round: </b>
+    <select name="round_select" id="round_select">
+        <option value="" disabled selected>Select a round</option>
+        {% for round in rounds %}
+            <option value="{{ round.id }}">{{ round.round_name }}</option>
+        {% endfor %}
+    </select>
+    <p></p>
+    <b>Match: </b>
+    <select id="match-select">
+        <!-- Options populated with JavaScript -->
+    </select>
+
+    <div id="data-display">
+        <!-- Data table populated with JavaScript -->
+    </div>
+
+    <script>
+        const roundSelect = document.getElementById('round_select');
+        const matchSelect = document.getElementById('match-select');
+
+        roundSelect.addEventListener('change', async () => {
+            const round_id = roundSelect.value;
+            const response = await fetch(`/api/matches/${round_id}`);
+            const data = await response.json();
+
+            matchSelect.innerHTML = '';
+            //Add a default option non selectable
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select a match';
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            matchSelect.appendChild(defaultOption);
+
+            //Add an option for each match
+            for (const match of data.matches) {
+                const option = document.createElement('option');
+                option.value = match.id;
+                option.textContent = match.matchup;
+                matchSelect.appendChild(option);
+            }
+
+        });
+
+        // Add an event listener to match select, to fetch data on the round 
+        // for each hole, will return hole_number, team a score, team b score, and match score
+        matchSelect.addEventListener('change', async () => {
+
+            const match_id = matchSelect.value;
+            const response = await fetch(`/api/match_data/${match_id}`);
+            const data = await response.json();
+
+            const dataDisplay = document.getElementById('data-display');
+            dataDisplay.innerHTML = '';
+
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            const headerRow = document.createElement('tr');
+            const headerHole = document.createElement('th');
+            headerHole.textContent = 'Hole';
+            headerRow.appendChild(headerHole);
+
+            const headerTeamA = document.createElement('th');
+            team_a_name = document.getElementById('team_a_name');
+            headerTeamA.textContent = team_a_name.value;
+            headerRow.appendChild(headerTeamA);
+
+            const headerTeamB = document.createElement('th');
+            team_b_name = document.getElementById('team_b_name');
+            headerTeamB.textContent = team_b_name.value;
+            headerRow.appendChild(headerTeamB);
+
+            const headerMatch = document.createElement('th');
+            headerMatch.textContent = 'Match';
+            headerRow.appendChild(headerMatch);
+
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            for (const hole of data.holes) {
+                const holeRow = document.createElement('tr');
+
+                const holeNumber = document.createElement('td');
+                holeNumber.textContent = hole.hole_number;
+                holeRow.appendChild(holeNumber);
+                
+                // Display team a score, team b score and match score in remaining 3 columns
+                const teamAScore = document.createElement('td');
+                teamAScore.textContent = hole.team_a_net_cumulative;
+                holeRow.appendChild(teamAScore);
+
+                const teamBScore = document.createElement('td');
+                teamBScore.textContent = hole.team_b_net_cumulative;
+                holeRow.appendChild(teamBScore);
+
+                const matchScore = document.createElement('td');
+                matchScore.textContent = hole.match_net;
+                holeRow.appendChild(matchScore);
+
+                tbody.appendChild(holeRow);
+            };
+            table.appendChild(tbody);
+            dataDisplay.appendChild(table);
+        });
+
+
+    </script>
+{% endblock %}
