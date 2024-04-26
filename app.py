@@ -36,7 +36,7 @@ Session(app)
 # )
 
 
-Confirgure database connection for pythonanywhere
+# Confirgure database connection for pythonanywhere
 SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
     username="tjg14",
     password="TJGfd2024",
