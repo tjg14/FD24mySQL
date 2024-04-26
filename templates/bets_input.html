@@ -23,13 +23,14 @@
         <!-- Options populated with JavaScript -->
     </select>
 
-    <div id="data-display">
+    <div class="mx-auto" id="bets-data-display">
         <!-- Data table populated with JavaScript -->
     </div>
 
     <script>
         const roundSelect = document.getElementById('round_select');
         const matchSelect = document.getElementById('match-select');
+        
 
         roundSelect.addEventListener('change', async () => {
             const round_id = roundSelect.value;
@@ -53,23 +54,33 @@
                 matchSelect.appendChild(option);
             }
 
+            // Clear bets data display
+            const dataDisplay = document.getElementById('bets-data-display');
+            dataDisplay.innerHTML = '';
+
         });
 
         // Add an event listener to match select, to fetch data on the round 
         // for each hole, will return hole_number, team a score, team b score, and match score
+        let match_api_data;
         matchSelect.addEventListener('change', async () => {
 
             const match_id = matchSelect.value;
             const response = await fetch(`/api/match_data/${match_id}`);
-            const data = await response.json();
+            match_api_data = await response.json();
+            console.log(match_api_data);
 
-            const dataDisplay = document.getElementById('data-display');
+            const dataDisplay = document.getElementById('bets-data-display');
             dataDisplay.innerHTML = '';
 
             const table = document.createElement('table');
             const thead = document.createElement('thead');
             const tbody = document.createElement('tbody');
 
+            table.classList.add('table');
+            table.classList.add('table-hover');
+            table.classList.add('table-striped');
+            
             const headerRow = document.createElement('tr');
             const headerHole = document.createElement('th');
             headerHole.textContent = 'Hole';
@@ -89,28 +100,79 @@
             headerMatch.textContent = 'Match';
             headerRow.appendChild(headerMatch);
 
+            const headerBets = document.createElement('th');
+            headerBets.textContent = 'Bets';
+            headerRow.appendChild(headerBets);
+
             thead.appendChild(headerRow);
             table.appendChild(thead);
 
-            for (const hole of data.holes) {
+            for (let i = 1; i <= 18; i++) {
                 const holeRow = document.createElement('tr');
 
                 const holeNumber = document.createElement('td');
-                holeNumber.textContent = hole.hole_number;
+                holeNumber.textContent = i;
                 holeRow.appendChild(holeNumber);
                 
                 // Display team a score, team b score and match score in remaining 3 columns
                 const teamAScore = document.createElement('td');
-                teamAScore.textContent = hole.team_a_net_cumulative;
+                teamAScore.textContent = match_api_data[i]["team_a_net_cumulative"];
                 holeRow.appendChild(teamAScore);
 
                 const teamBScore = document.createElement('td');
-                teamBScore.textContent = hole.team_b_net_cumulative;
+                teamBScore.textContent = match_api_data[i].team_b_net_cumulative;
                 holeRow.appendChild(teamBScore);
 
                 const matchScore = document.createElement('td');
-                matchScore.textContent = hole.match_net;
+                matchScore.textContent = match_api_data[i].match_net;
                 holeRow.appendChild(matchScore);
+
+                const betsCell = document.createElement('td');
+                
+                if (i < 10) {
+                    if (i == 1) {
+                        betsCell.appendChild(document.createTextNode(`F9: ${match_api_data[i]["F9"]["current_bets"]} 18: ${match_api_data[i]["18"]["current_bets"]}`));
+                    } else {
+                        if (match_api_data[i]["F9"]["available_bets"] > 0) {
+                            const betsSelectF9 = createBetsSelect('F9', i);
+                            betsCell.appendChild(document.createTextNode('F9: '));
+                            betsCell.appendChild(betsSelectF9);
+                        }
+                        if (match_api_data[i]["18"]["available_bets"] > 0) {
+                            const betsSelect18 = createBetsSelect('18', i);
+                            betsCell.appendChild(document.createTextNode(' 18: '));
+                            betsCell.appendChild(betsSelect18);
+                        }
+                        if (match_api_data[i]["F9"]["available_bets"] == 0 && match_api_data[i]["18"]["available_bets"] == 0) {
+                            betsCell.appendChild(document.createTextNode('n/a'));
+                        }
+                    } 
+                }
+                if (i >= 10) {
+                    if (i == 10) {
+                        betsCell.appendChild(document.createTextNode(`B9: ${match_api_data[i]["B9"]["current_bets"]}`));
+                        if (match_api_data[i]["18"]["available_bets"] > 0) {
+                            const betsSelect18 = createBetsSelect('18', i);
+                            betsCell.appendChild(document.createTextNode(' 18: '));
+                            betsCell.appendChild(betsSelect18);
+                        }
+                    } else {
+                        if (match_api_data[i]["B9"]["available_bets"] > 0) {
+                            const betsSelectF9 = createBetsSelect('B9', i);
+                            betsCell.appendChild(document.createTextNode('B9: '));
+                            betsCell.appendChild(betsSelectF9);
+                        }
+                        if (match_api_data[i]["18"]["available_bets"] > 0) {
+                            const betsSelect18 = createBetsSelect('18', i);
+                            betsCell.appendChild(document.createTextNode(' 18: '));
+                            betsCell.appendChild(betsSelect18);
+                        }
+                        if (match_api_data[i]["B9"]["available_bets"] == 0 && match_api_data[i]["18"]["available_bets"] == 0) {
+                            betsCell.appendChild(document.createTextNode('n/a'));
+                        }
+                    }
+                }
+                holeRow.appendChild(betsCell);
 
                 tbody.appendChild(holeRow);
             };
@@ -118,6 +180,39 @@
             dataDisplay.appendChild(table);
         });
 
+        function createBetsSelect(type, holeNumber) {
+            const betsSelect = document.createElement('select');
 
+            // Populate the select element with the available bets
+            for (let i = 0; i <= match_api_data[holeNumber][type]["available_bets"]; i++) {
+                const betOption = document.createElement('option');
+                betOption.value = i;
+                betOption.textContent = i;
+                if (i === match_api_data[holeNumber][type]["current_bets"]) {
+                    betOption.selected = true;
+                }
+                betsSelect.appendChild(betOption);
+            }
+
+            // Add an event listener to the select element
+            betsSelect.addEventListener('change', () => {
+                // Update the current bet value for this hole
+                match_api_data[holeNumber][type]["current_bets"] = parseInt(betsSelect.value);
+
+                // Recalculate the available bets for each hole
+                recalculateAvailableBets();
+            });
+
+            return betsSelect;
+        }
+
+        function recalculateAvailableBets() {
+            // This function should recalculate the available bets for each hole
+            // based on the current bets selected and the match score for each hole.
+            // The implementation of this function depends on your specific business logic.
+            //log that it made to it this function
+            console.log('recalculateAvailableBets');
+            //clear and re-populate the bets column and select elements
+        }
     </script>
 {% endblock %}

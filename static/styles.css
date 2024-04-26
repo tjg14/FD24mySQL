@@ -40,6 +40,12 @@ nav .navbar-brand .group_title
     margin-right: auto;
 }
 
+#bets-data-display {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 #player_table {
     vertical-align: middle;
 }

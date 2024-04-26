@@ -28,21 +28,21 @@ Session(app)
 
 # Confirgure database connection locally
 
-SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
-    username="root",
-    password="password123",
-    hostname="localhost",
-    databasename="FD2024",
-)
-
-
-#Confirgure database connection for pythonanywhere
-# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
-#     username="tjg14",
-#     password="TJGfd2024",
-#     hostname="tjg14.mysql.pythonanywhere-services.com",
-#     databasename="tjg14$FD2024",
+# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
+#     username="root",
+#     password="password123",
+#     hostname="localhost",
+#     databasename="FD2024",
 # )
+
+
+Confirgure database connection for pythonanywhere
+SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
+    username="tjg14",
+    password="TJGfd2024",
+    hostname="tjg14.mysql.pythonanywhere-services.com",
+    databasename="tjg14$FD2024",
+)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
@@ -171,6 +171,16 @@ class Scores(db.Model):
     match_hole_number = db.Column(db.Integer, primary_key=True, nullable=False)
     player_id = db.Column(db.Integer, db.ForeignKey("players.id"), primary_key=True, nullable=False)
     score = db.Column(db.Integer, nullable=False)
+
+class Bets(db.Model):
+    __tablename__ = 'bets'
+
+    match_id = db.Column(db.Integer, db.ForeignKey("matches.id"), primary_key=True, nullable=False)
+    match_hole_number = db.Column(db.Integer, primary_key=True, nullable=False)
+    front_9_bets = db.Column(db.Integer)
+    back_9_bets = db.Column(db.Integer)
+    total_18_bets = db.Column(db.Integer)
+
 
 @app.after_request
 def after_request(response):
@@ -1396,7 +1406,7 @@ def get_matches(round_id):
 @app.route('/api/match_data/<int:match_id>')
 def get_match_data(match_id):
     # Get match, team a and team b players and course from match joined load
-    print(match_id)
+    
     match = (Match.query
             .options(
                 joinedload(Match.team_a).joinedload(Team.players).joinedload(Player.handicaps), 
@@ -1452,8 +1462,6 @@ def get_match_data(match_id):
     course = match.course_tee
     
     for team in [team_a, team_b]:
-            # Create a list of dictionaries for each player in the team, and add the player's playing handicap
-            print(team["players"])
             for player in team["players"]:
                 player_index = player["handicap_index"]
                 if player_index:
@@ -1470,12 +1478,12 @@ def get_match_data(match_id):
              .all()
             )
     
-    holes_data = []
+    holes_data = {}
     team_a_net_cumulative = 0
     team_b_net_cumulative = 0
     match_net_cumulative = 0
 
-
+    
     for hole in holes:
         hole_number = hole.hole_number
         hole_hcp = hole.hole_hcp
@@ -1512,14 +1520,56 @@ def get_match_data(match_id):
                 team_b_net_cumulative += team_total_net_score
                 match_net_cumulative += team_total_net_score
 
-        hole_data = {"hole_number": hole_number, 
-                    "team_a_net_cumulative": team_a_net_cumulative, 
-                    "team_b_net_cumulative": team_b_net_cumulative,
-                    "match_net": match_net_cumulative
-                    }
-        holes_data.append(hole_data)
-    
-    for hole in holes_data:
-        print(hole)
+        holes_data[hole_number] = {
+            "team_a_net_cumulative": team_a_net_cumulative, 
+            "team_b_net_cumulative": team_b_net_cumulative,
+            "match_net": match_net_cumulative,
+            "F9": {
+                "available_bets": 0,
+                "current_bets": 0,
+            },
+            "B9": {
+                "available_bets": 0,
+                "current_bets": 0,
+            },
+            "18": {
+                "available_bets": 0,
+                "current_bets": 0,
+            }
+        }
 
-    return jsonify(holes=holes_data)
+    # Load bets in the match
+    bets = (Bets.query
+            .filter_by(match_id=match_id)
+            .all()
+            )
+    if bets:
+        for bet in bets:
+            hole_number = bet.match_hole_number
+            if hole_number in holes_data:
+                holes_data[hole_number]["F9"]["current_bets"] = bet.front_9_bets
+                holes_data[hole_number]["F9"]["available_bets"] = bet.front_9_bets
+                holes_data[hole_number]["B9"]["current_bets"] = bet.back_9_bets
+                holes_data[hole_number]["B9"]["available_bets"] = bet.back_9_bets
+                holes_data[hole_number]["18"]["current_bets"] = bet.total_18_bets
+                holes_data[hole_number]["18"]["available_bets"] = bet.total_18_bets
+    else:
+        # Add to bets table hole 1, 1 front 9 bet and 1 18 bet, and to hole 10, 1 back 9 bet
+        new_bet = Bets(match_id=match_id, match_hole_number=1, front_9_bets=1, back_9_bets = None, total_18_bets=1)
+        db.session.add(new_bet)
+        new_bet = Bets(match_id=match_id, match_hole_number=10, front_9_bets=None, back_9_bets = 1, total_18_bets=None)
+        db.session.add(new_bet)
+        db.session.commit()
+        holes_data[1]["F9"]["current_bets"] = 1
+        holes_data[1]["F9"]["available_bets"] = 1
+        holes_data[1]["18"]["current_bets"] = 1
+        holes_data[1]["18"]["available_bets"] = 1
+        holes_data[10]["B9"]["current_bets"] = 1
+        holes_data[10]["B9"]["available_bets"] = 1
+ 
+    # Calculate available bets and update 
+    
+       
+
+    return jsonify(holes_data)
+

@@ -117,7 +117,7 @@ CREATE TABLE scores (
     PRIMARY KEY (match_id, match_hole_number, player_id)
 );
 
-CREATE TABLE presses (
+CREATE TABLE bets (
     match_id INT NOT NULL,
     match_hole_number INT NOT NULL,
     front_9_bets INT,
