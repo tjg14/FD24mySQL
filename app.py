@@ -10,7 +10,10 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import logging
 
-from helpers import apology, login_required, group_login_required, event_selected, usd, format_positive, format_none, playing_hcp
+from helpers import (apology, login_required, 
+                     group_login_required, event_selected, usd, 
+                     format_positive, format_none, playing_hcp, 
+                     check_bet_availability)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -28,21 +31,21 @@ Session(app)
 
 # Confirgure database connection locally
 
-# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
-#     username="root",
-#     password="password123",
-#     hostname="localhost",
-#     databasename="FD2024",
-# )
+SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
+    username="root",
+    password="password123",
+    hostname="localhost",
+    databasename="FD2024",
+)
 
 
 # Confirgure database connection for pythonanywhere
-SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
-    username="tjg14",
-    password="TJGfd2024",
-    hostname="tjg14.mysql.pythonanywhere-services.com",
-    databasename="tjg14$FD2024",
-)
+# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
+#     username="tjg14",
+#     password="TJGfd2024",
+#     hostname="tjg14.mysql.pythonanywhere-services.com",
+#     databasename="tjg14$FD2024",
+# )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
@@ -1568,8 +1571,42 @@ def get_match_data(match_id):
         holes_data[10]["B9"]["available_bets"] = 1
  
     # Calculate available bets and update 
+    for i in range(2, 19):
+        if i < 10:
+            if holes_data[i]["F9"]["current_bets"] == 0:
+                if check_bet_availability(holes_data, i, "F9"):
+                    holes_data[i]["F9"]["available_bets"] = 1
+        if i > 10:
+            if holes_data[i]["B9"]["current_bets"] == 0:
+                if check_bet_availability(holes_data, i, "B9"):
+                    holes_data[i]["B9"]["available_bets"] = 1
+        
+        if holes_data[i]["18"]["current_bets"] == 0:
+            if check_bet_availability(holes_data, i, "18"):
+                holes_data[i]["18"]["available_bets"] = 1
     
-       
 
     return jsonify(holes_data)
+
+
+
+@app.route('/check_bet_availability', methods=['POST'])
+def api_check_bet_availability():
+   
+    data = request.get_json()
+    match_api_data = data['data']
+    holeNumber = data['holeNumber']
+    type = data['type']
+
+    # Convert the keys to integers
+    try:
+        match_api_data = {int(k): v for k, v in match_api_data.items()}
+    except ValueError:
+        return apology("Error converting hole numbers to integers")
+
+    # Call your Python function here
+    result = check_bet_availability(match_api_data, holeNumber, type)
+
+
+    return jsonify(result=result)
 

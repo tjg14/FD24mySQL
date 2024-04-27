@@ -128,9 +128,65 @@
                 holeRow.appendChild(matchScore);
 
                 const betsCell = document.createElement('td');
-                betsCell.id = `betsCell_${i}`;
-                editBetsCell(i, betsCell);
                 
+                if (i < 10) {
+                    if (i == 1) {
+                        const betsCheckboxF9 = createBetsCheckbox('F9', i);
+                        betsCheckboxF9.checked = true;
+                        betsCheckboxF9.disabled = true;
+                        betsCell.appendChild(document.createTextNode('F9: '));
+                        betsCell.appendChild(betsCheckboxF9);
+
+                        const betsCheckbox18 = createBetsCheckbox('18', i);
+                        betsCheckbox18.checked = true;
+                        betsCheckbox18.disabled = true;
+                        betsCell.appendChild(document.createTextNode(' 18: '));
+                        betsCell.appendChild(betsCheckbox18);
+
+                    } else {
+                        if (match_api_data[i]["F9"]["available_bets"] == 1) {
+                            const betsCheckboxF9 = createBetsCheckbox('F9', i);
+                            betsCell.appendChild(document.createTextNode('F9: '));
+                            betsCell.appendChild(betsCheckboxF9);
+                        }
+                        if (match_api_data[i]["18"]["available_bets"] == 1) {
+                            const betsCheckbox18 = createBetsCheckbox('18', i);
+                            betsCell.appendChild(document.createTextNode(' 18: '));
+                            betsCell.appendChild(betsCheckbox18);
+                        }
+                        if (match_api_data[i]["F9"]["available_bets"] == 0 && match_api_data[i]["18"]["available_bets"] == 0) {
+                            betsCell.appendChild(document.createTextNode('n/a'));
+                        }
+                    } 
+                }
+                if (i >= 10) {
+                    if (i == 10) {
+                        const betsCheckboxB9 = createBetsCheckbox('B9', i);
+                        betsCheckboxB9.checked = true;
+                        betsCheckboxB9.disabled = true;
+                        betsCell.appendChild(document.createTextNode('B9: '));
+                        betsCell.appendChild(betsCheckboxB9);
+                        if (match_api_data[i]["18"]["available_bets"] = 1) {
+                            const betsCheckbox18 = createBetsCheckbox('18', i);
+                            betsCell.appendChild(document.createTextNode(' 18: '));
+                            betsCell.appendChild(betsCheckbox18);
+                        }
+                    } else {
+                        if (match_api_data[i]["B9"]["available_bets"] == 1) {
+                            const betsCheckboxB9 = createBetsCheckbox('B9', i);
+                            betsCell.appendChild(document.createTextNode('B9: '));
+                            betsCell.appendChild(betsCheckboxB9);
+                        }
+                        if (match_api_data[i]["18"]["available_bets"] == 1) {
+                            const betsCheckbox18 = createBetsCheckbox('18', i);
+                            betsCell.appendChild(document.createTextNode(' 18: '));
+                            betsCell.appendChild(betsCheckbox18);
+                        }
+                        if (match_api_data[i]["B9"]["available_bets"] == 0 && match_api_data[i]["18"]["available_bets"] == 0) {
+                            betsCell.appendChild(document.createTextNode('n/a'));
+                        }
+                    }
+                }
                 holeRow.appendChild(betsCell);
 
                 tbody.appendChild(holeRow);
@@ -139,70 +195,6 @@
             dataDisplay.appendChild(table);
         });
 
-        function editBetsCell(i, betsCell) {
-            betsCell.innerHTML = ''; // Clear the bets cell
-
-            if (i < 10) {
-                if (i == 1) {
-                    const betsCheckboxF9 = createBetsCheckbox('F9', i);
-                    betsCheckboxF9.checked = true;
-                    betsCheckboxF9.disabled = true;
-                    betsCell.appendChild(document.createTextNode('F9: '));
-                    betsCell.appendChild(betsCheckboxF9);
-
-                    const betsCheckbox18 = createBetsCheckbox('18', i);
-                    betsCheckbox18.checked = true;
-                    betsCheckbox18.disabled = true;
-                    betsCell.appendChild(document.createTextNode(' 18: '));
-                    betsCell.appendChild(betsCheckbox18);
-
-                } else {
-                    if (match_api_data[i]["F9"]["available_bets"] == 1) {
-                        const betsCheckboxF9 = createBetsCheckbox('F9', i);
-                        betsCell.appendChild(document.createTextNode('F9: '));
-                        betsCell.appendChild(betsCheckboxF9);
-                        console.log("created checkbox");
-                    }
-                    if (match_api_data[i]["18"]["available_bets"] == 1) {
-                        const betsCheckbox18 = createBetsCheckbox('18', i);
-                        betsCell.appendChild(document.createTextNode(' 18: '));
-                        betsCell.appendChild(betsCheckbox18);
-                    }
-                    if (match_api_data[i]["F9"]["available_bets"] == 0 && match_api_data[i]["18"]["available_bets"] == 0) {
-                        betsCell.appendChild(document.createTextNode('n/a'));
-                    }
-                } 
-            }
-            if (i >= 10) {
-                if (i == 10) {
-                    const betsCheckboxB9 = createBetsCheckbox('B9', i);
-                    betsCheckboxB9.checked = true;
-                    betsCheckboxB9.disabled = true;
-                    betsCell.appendChild(document.createTextNode('B9: '));
-                    betsCell.appendChild(betsCheckboxB9);
-                    if (match_api_data[i]["18"]["available_bets"] = 1) {
-                        const betsCheckbox18 = createBetsCheckbox('18', i);
-                        betsCell.appendChild(document.createTextNode(' 18: '));
-                        betsCell.appendChild(betsCheckbox18);
-                    }
-                } else {
-                    if (match_api_data[i]["B9"]["available_bets"] == 1) {
-                        const betsCheckboxB9 = createBetsCheckbox('B9', i);
-                        betsCell.appendChild(document.createTextNode('B9: '));
-                        betsCell.appendChild(betsCheckboxB9);
-                    }
-                    if (match_api_data[i]["18"]["available_bets"] == 1) {
-                        const betsCheckbox18 = createBetsCheckbox('18', i);
-                        betsCell.appendChild(document.createTextNode(' 18: '));
-                        betsCell.appendChild(betsCheckbox18);
-                    }
-                    if (match_api_data[i]["B9"]["available_bets"] == 0 && match_api_data[i]["18"]["available_bets"] == 0) {
-                        betsCell.appendChild(document.createTextNode('n/a'));
-                    }
-                }
-            }
-        }
-        
         function createBetsCheckbox(type, holeNumber) {
             const betsCheckbox = document.createElement('input');
             betsCheckbox.type = 'checkbox';
@@ -217,10 +209,6 @@
             betsCheckbox.addEventListener('change', () => {
                 // Update the current bet value for this hole
                 match_api_data[holeNumber][type]["current_bets"] = betsCheckbox.checked ? 1 : 0;
-                console.log("hole change");
-                console.log(holeNumber);
-                console.log("to");
-                console.log(match_api_data[holeNumber][type]["current_bets"]);
 
                 // Recalculate the available bets for each hole
                 recalculateAvailableBets();
@@ -230,70 +218,12 @@
         }
 
         function recalculateAvailableBets() {
-            // Mimic app/helper function on checking available bets
-            for (let i = 1; i <= 18; i++) {
-                if (i < 10) {
-                    if (match_api_data[i]["F9"]["current_bets"] == 0) {
-                        check_bet_availability(match_api_data, i, "F9").then(isAvailable => {
-                            if(isAvailable) {
-                                match_api_data[i]["F9"]["available_bets"] = 1;
-                            } else {
-                                match_api_data[i]["F9"]["available_bets"] = 0;
-                            }
-                        });
-                    }
-                }
-                if (i > 10) {
-                    if (match_api_data[i]["B9"]["current_bets"] == 0) {
-                        check_bet_availability(match_api_data, i, "B9").then(isAvailable => {
-                            if(isAvailable) {
-                                match_api_data[i]["B9"]["available_bets"] = 1;
-                            } else {
-                                match_api_data[i]["B9"]["available_bets"] = 0;
-                            }
-                        });
-                    }
-                }
-                if (match_api_data[i]["18"]["current_bets"] == 0) {
-                    check_bet_availability(match_api_data, i, "18").then(isAvailable => {
-                        if(isAvailable) {
-                            match_api_data[i]["18"]["available_bets"] = 1;
-                        } else {
-                            match_api_data[i]["18"]["available_bets"] = 0;
-                        }
-                    });
-                }
-            }
-            //TO CLEAR
-            console.log(match_api_data);
-
-            // Clear and re-populate the bets column and select elements
-            for (let i = 1; i <= 18; i++) {
-                const betsCell = document.querySelector(`#betsCell_${i}`);
-                console.log(betsCell.id);
-                editBetsCell(i, betsCell);
-                
-            }
-        }
-
-        function check_bet_availability(match_api_data, i, type) {
-            return fetch('/check_bet_availability', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    data: match_api_data,
-                    holeNumber: i,
-                    type: type
-                }),
-            })
-            .then(response => response.json())
-            .then(data => Boolean(data.result)) // Convert result to boolean
-            .catch(error => {
-                console.error('Error:', error);
-                return false; // Return false in case of error
-            });
+            // This function should recalculate the available bets for each hole
+            // based on the current bets selected and the match score for each hole.
+            // The implementation of this function depends on your specific business logic.
+            //log that it made to it this function
+            console.log('recalculateAvailableBets');
+            //clear and re-populate the bets column and select elements
         }
     </script>
 {% endblock %}

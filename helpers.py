@@ -82,3 +82,45 @@ def playing_hcp(index, slope, rating, par):
     """Calculate playing handicap for a player."""
     course_hcp = index * float(slope) / 113 + (rating - par)
     return int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))
+
+def check_bet_availability(holes_data, hole_number, bet_type):
+    """Check if a bet is available for a hole."""
+    check_answer = True
+    print("hole number check:")
+    print(hole_number)
+    # For each hole there is a bet, check if match score has changed since last bet
+    if bet_type == "F9":
+        latest_bet_hole = 1
+        latest_match_score = 0
+        for i in range(2, 10):
+            if i == hole_number or holes_data[i][bet_type]["current_bets"] == 1:
+                if holes_data[i - 1]["match_net"] != latest_match_score:
+                    latest_bet_hole = i
+                    latest_match_score = holes_data[i - 1]["match_net"]
+                else:
+                    check_answer = False
+                    break
+    elif bet_type == "B9":
+        latest_bet_hole = 10
+        latest_match_score = 0
+        for i in range(11, 19):
+            if i == hole_number or holes_data[i][bet_type]["current_bets"] == 1:
+                if holes_data[i - 1]["match_net"] != latest_match_score:
+                    latest_bet_hole = i
+                    latest_match_score = holes_data[i - 1]["match_net"]
+                else:
+                    check_answer = False
+                    break
+    elif bet_type == "18":
+        latest_bet_hole = 1
+        latest_match_score = 0
+        for i in range(2, 19):
+            if i == hole_number or holes_data[i][bet_type]["current_bets"] == 1:
+                if holes_data[i - 1]["match_net"] != latest_match_score:
+                    latest_bet_hole = i
+                    latest_match_score = holes_data[i - 1]["match_net"]
+                else:
+                    check_answer = False
+                    break
+    print(check_answer)
+    return check_answer
