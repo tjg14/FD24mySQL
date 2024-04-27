@@ -7,8 +7,6 @@
 {% block main %}
     
     <p><b>Event Name: </b>{{ event_name }}</p>
-    <input type="hidden" name="team_a_name" id="team_a_name">
-    <input type="hidden" name="team_b_name" id="team_b_name">
 
     <b>Round: </b>
     <select name="round_select" id="round_select">
@@ -30,12 +28,12 @@
     <script>
         const roundSelect = document.getElementById('round_select');
         const matchSelect = document.getElementById('match-select');
-        
+        let data;
 
         roundSelect.addEventListener('change', async () => {
             const round_id = roundSelect.value;
             const response = await fetch(`/api/matches/${round_id}`);
-            const data = await response.json();
+            data = await response.json();
 
             matchSelect.innerHTML = '';
             //Add a default option non selectable
@@ -68,7 +66,6 @@
             const match_id = matchSelect.value;
             const response = await fetch(`/api/match_data/${match_id}`);
             match_api_data = await response.json();
-            console.log(match_api_data);
 
             const dataDisplay = document.getElementById('bets-data-display');
             dataDisplay.innerHTML = '';
@@ -82,33 +79,39 @@
             table.classList.add('table-striped');
             
             const headerRow = document.createElement('tr');
+
+            const headerBets = document.createElement('th');
+            headerBets.textContent = 'Bets';
+            headerRow.appendChild(headerBets);
+            
             const headerHole = document.createElement('th');
             headerHole.textContent = 'Hole';
             headerRow.appendChild(headerHole);
 
             const headerTeamA = document.createElement('th');
-            team_a_name = document.getElementById('team_a_name');
-            headerTeamA.textContent = team_a_name.value;
+            headerTeamA.textContent = "TeamA";
             headerRow.appendChild(headerTeamA);
 
             const headerTeamB = document.createElement('th');
-            team_b_name = document.getElementById('team_b_name');
-            headerTeamB.textContent = team_b_name.value;
+            headerTeamB.textContent = "TeamB";
             headerRow.appendChild(headerTeamB);
 
             const headerMatch = document.createElement('th');
             headerMatch.textContent = 'Match';
             headerRow.appendChild(headerMatch);
 
-            const headerBets = document.createElement('th');
-            headerBets.textContent = 'Bets';
-            headerRow.appendChild(headerBets);
+            
 
             thead.appendChild(headerRow);
             table.appendChild(thead);
 
             for (let i = 1; i <= 18; i++) {
                 const holeRow = document.createElement('tr');
+
+                const betsCell = document.createElement('td');
+                betsCell.id = `betsCell_${i}`;
+                editBetsCell(i, betsCell);
+                holeRow.appendChild(betsCell);
 
                 const holeNumber = document.createElement('td');
                 holeNumber.textContent = i;
@@ -127,11 +130,7 @@
                 matchScore.textContent = match_api_data[i].match_net;
                 holeRow.appendChild(matchScore);
 
-                const betsCell = document.createElement('td');
-                betsCell.id = `betsCell_${i}`;
-                editBetsCell(i, betsCell);
                 
-                holeRow.appendChild(betsCell);
 
                 tbody.appendChild(holeRow);
             };
@@ -161,7 +160,6 @@
                         const betsCheckboxF9 = createBetsCheckbox('F9', i);
                         betsCell.appendChild(document.createTextNode('F9: '));
                         betsCell.appendChild(betsCheckboxF9);
-                        console.log("created checkbox");
                     }
                     if (match_api_data[i]["18"]["available_bets"] == 1) {
                         const betsCheckbox18 = createBetsCheckbox('18', i);
@@ -180,13 +178,13 @@
                     betsCheckboxB9.disabled = true;
                     betsCell.appendChild(document.createTextNode('B9: '));
                     betsCell.appendChild(betsCheckboxB9);
-                    if (match_api_data[i]["18"]["available_bets"] = 1) {
+                    if (match_api_data[i]["18"]["available_bets"] == 1) {
                         const betsCheckbox18 = createBetsCheckbox('18', i);
                         betsCell.appendChild(document.createTextNode(' 18: '));
                         betsCell.appendChild(betsCheckbox18);
                     }
                 } else {
-                    if (match_api_data[i]["B9"]["available_bets"] == 1) {
+                    if (match_api_data[i]["B9"]["available_bets"] == 1) {    
                         const betsCheckboxB9 = createBetsCheckbox('B9', i);
                         betsCell.appendChild(document.createTextNode('B9: '));
                         betsCell.appendChild(betsCheckboxB9);
@@ -231,37 +229,31 @@
 
         function recalculateAvailableBets() {
             // Mimic app/helper function on checking available bets
-            for (let i = 1; i <= 18; i++) {
+            for (let i = 2; i <= 18; i++) {
                 if (i < 10) {
                     if (match_api_data[i]["F9"]["current_bets"] == 0) {
-                        check_bet_availability(match_api_data, i, "F9").then(isAvailable => {
-                            if(isAvailable) {
-                                match_api_data[i]["F9"]["available_bets"] = 1;
-                            } else {
-                                match_api_data[i]["F9"]["available_bets"] = 0;
-                            }
-                        });
+                        if (check_bet_availability(match_api_data, i, "F9")) {
+                            match_api_data[i]["F9"]["available_bets"] = 1;
+                        } else {
+                            match_api_data[i]["F9"]["available_bets"] = 0;
+                        }
                     }
                 }
                 if (i > 10) {
                     if (match_api_data[i]["B9"]["current_bets"] == 0) {
-                        check_bet_availability(match_api_data, i, "B9").then(isAvailable => {
-                            if(isAvailable) {
-                                match_api_data[i]["B9"]["available_bets"] = 1;
-                            } else {
-                                match_api_data[i]["B9"]["available_bets"] = 0;
-                            }
-                        });
+                        if (check_bet_availability(match_api_data, i, "B9")) {
+                            match_api_data[i]["B9"]["available_bets"] = 1;
+                        } else {
+                            match_api_data[i]["B9"]["available_bets"] = 0;
+                        }
                     }
                 }
                 if (match_api_data[i]["18"]["current_bets"] == 0) {
-                    check_bet_availability(match_api_data, i, "18").then(isAvailable => {
-                        if(isAvailable) {
-                            match_api_data[i]["18"]["available_bets"] = 1;
-                        } else {
-                            match_api_data[i]["18"]["available_bets"] = 0;
-                        }
-                    });
+                    if (check_bet_availability(match_api_data, i, "18")) {
+                        match_api_data[i]["18"]["available_bets"] = 1;
+                    } else {
+                        match_api_data[i]["18"]["available_bets"] = 0;
+                    }
                 }
             }
             //TO CLEAR
@@ -276,24 +268,55 @@
             }
         }
 
-        function check_bet_availability(match_api_data, i, type) {
-            return fetch('/check_bet_availability', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    data: match_api_data,
-                    holeNumber: i,
-                    type: type
-                }),
-            })
-            .then(response => response.json())
-            .then(data => Boolean(data.result)) // Convert result to boolean
-            .catch(error => {
-                console.error('Error:', error);
-                return false; // Return false in case of error
-            });
+        function check_bet_availability(match_api_data, hole_number, bet_type) {
+            let check_answer = true;
+            console.log("hole number check");
+            console.log(hole_number);
+            if (bet_type == "F9") {
+                let latest_bet_hole = 1;
+                console.log("F9 check");
+                let latest_match_score = 0;
+                for (i = 2; i <= 9; i++) {
+                    if (hole_number == i || match_api_data[i]["F9"]["current_bets"] == 1) {
+                        if (match_api_data[i - 1]["match_net"] != latest_match_score) {
+                            latest_bet_hole = i;
+                            latest_match_score = match_api_data[i - 1]["match_net"];
+                        } else {
+                            check_answer = false;
+                            break;
+                        }
+                    }
+                }
+            } else if (bet_type == "B9") {
+                let latest_bet_hole = 10;
+                let latest_match_score = match_api_data[9]["match_net"];
+                for (i = 11; i <= 18; i++) {
+                    if (hole_number == i || match_api_data[i]["B9"]["current_bets"] == 1) {
+                        if (match_api_data[i - 1]["match_net"] != latest_match_score) {
+                            latest_bet_hole = i;
+                            latest_match_score = match_api_data[i - 1]["match_net"];
+                        } else {
+                            check_answer = false;
+                            break
+                        }
+                    }
+                }
+            } else if (bet_type == "18") {
+                let latest_bet_hole = 1;
+                let latest_match_score = 0;
+                for (i = 2; i <= 18; i++) {
+                    if (hole_number == i || match_api_data[i]["18"]["current_bets"] == 1) {
+                        if (match_api_data[i - 1]["match_net"] != latest_match_score) {
+                            latest_bet_hole = i;
+                            latest_match_score = match_api_data[i - 1]["match_net"];
+                        } else {
+                            check_answer = false;
+                            break
+                        }
+                    }
+                }
+            }
+            return check_answer;
         }
     </script>
 {% endblock %}

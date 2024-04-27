@@ -86,8 +86,6 @@ def playing_hcp(index, slope, rating, par):
 def check_bet_availability(holes_data, hole_number, bet_type):
     """Check if a bet is available for a hole."""
     check_answer = True
-    print("hole number check:")
-    print(hole_number)
     # For each hole there is a bet, check if match score has changed since last bet
     if bet_type == "F9":
         latest_bet_hole = 1
@@ -102,7 +100,7 @@ def check_bet_availability(holes_data, hole_number, bet_type):
                     break
     elif bet_type == "B9":
         latest_bet_hole = 10
-        latest_match_score = 0
+        latest_match_score = holes_data[9]["match_net"]
         for i in range(11, 19):
             if i == hole_number or holes_data[i][bet_type]["current_bets"] == 1:
                 if holes_data[i - 1]["match_net"] != latest_match_score:
@@ -122,5 +120,4 @@ def check_bet_availability(holes_data, hole_number, bet_type):
                 else:
                     check_answer = False
                     break
-    print(check_answer)
     return check_answer
