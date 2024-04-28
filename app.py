@@ -6,6 +6,7 @@ from sqlalchemy import func, desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from flask import Flask, jsonify, flash, redirect, render_template, request, session
+import json
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import logging
@@ -31,21 +32,21 @@ Session(app)
 
 # Confirgure database connection locally
 
-# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
-#     username="root",
-#     password="password123",
-#     hostname="localhost",
-#     databasename="FD2024",
-# )
-
+SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://root:password123@localhost:3306/FD2024".format(
+    username="root",
+    password="password123",
+    hostname="localhost",
+    databasename="FD2024",
+)
 
 # Confirgure database connection for pythonanywhere
-SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
-    username="tjg14",
-    password="TJGfd2024",
-    hostname="tjg14.mysql.pythonanywhere-services.com",
-    databasename="tjg14$FD2024",
-)
+
+# SQLALCHEMY_DATABASE_URI = "mysql+mysqlconnector://tjg14:TJGfd2024@tjg14.mysql.pythonanywhere-services.com:3306/tjg14$FD2024".format(
+#     username="tjg14",
+#     password="TJGfd2024",
+#     hostname="tjg14.mysql.pythonanywhere-services.com",
+#     databasename="tjg14$FD2024",
+# )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
@@ -1376,14 +1377,6 @@ def bets_input():
                            )
 
 
-@app.route('/bets_results', methods=['GET'])
-@login_required
-@group_login_required
-@event_selected
-def betting_results():
- 
-    return apology("Not yet implemented")
-
 
 @app.route('/api/matches/<int:round_id>')
 @login_required
@@ -1574,21 +1567,312 @@ def get_match_data(match_id):
     # Calculate available bets and update 
     for i in range(2, 19):
         if i < 10:
-            if holes_data[i]["F9"]["current_bets"] == 0:
-                if check_bet_availability(holes_data, i, "F9"):
-                    holes_data[i]["F9"]["available_bets"] = 1
+            if check_bet_availability(holes_data, i, "F9"):
+                holes_data[i]["F9"]["available_bets"] = 1
         if i > 10:
-            if holes_data[i]["B9"]["current_bets"] == 0:
-                if check_bet_availability(holes_data, i, "B9"):
-                    holes_data[i]["B9"]["available_bets"] = 1
-        
-        if holes_data[i]["18"]["current_bets"] == 0:
-            if check_bet_availability(holes_data, i, "18"):
-                holes_data[i]["18"]["available_bets"] = 1
+            if check_bet_availability(holes_data, i, "B9"):
+                holes_data[i]["B9"]["available_bets"] = 1
+        if check_bet_availability(holes_data, i, "18"):
+             holes_data[i]["18"]["available_bets"] = 1
     
 
     return jsonify(holes_data)
 
 
+@app.route('/process_bets', methods=['POST'])
+def process_bets():
+    
+    match_data = request.get_json()
+
+    # Save match_id
+    match_id = match_data.pop("match_id", None)
+
+    #Convert keys to ints
+    match_data = {int(k): v for k, v in match_data.items()}
+    
+    # Reconfirm current bets are valid
+    for i in range(2, 19):
+        if i < 10:
+            if match_data[i]["F9"]["current_bets"] == 1:
+                if not check_bet_availability(match_data, i, "F9"):
+                    return jsonify({"error": True, "message": "Invalid bet on hole " + str(i) + " front 9"})
+        if i > 10:
+            if match_data[i]["B9"]["current_bets"] == 1:
+                if not check_bet_availability(match_data, i, "B9"):
+                    return jsonify({"error": True, "message": "Invalid bet on hole " + str(i) + " back 9"})
+        if match_data[i]["18"]["current_bets"] == 1:
+            if not check_bet_availability(match_data, i, "18"):
+                    return jsonify({"error": True, "message": "Invalid bet on hole " + str(i) + " 18"})
+
+    # Pull bets in database for the match id
+    bets = (Bets.query
+            .filter_by(match_id=match_id)
+            .all()
+            )
+    # Create a dictionary for each hole in bets
+    bets_dict = {bet.match_hole_number: bet for bet in bets}
+    
+    # For holes 1-18, check if bets exist in database, if not, add them
+    for i in range(1, 19):
+        if (i < 10):    
+            if match_data[i]["F9"]["current_bets"] == 1:
+                if i not in bets_dict:
+                    new_bet = Bets(match_id=match_id, match_hole_number=i, front_9_bets=1)
+                    db.session.add(new_bet)
+                    bets_dict[i] = new_bet
+                elif not bets_dict[i].front_9_bets:
+                    bets_dict[i].front_9_bets = 1
+        if (i > 10):
+            if match_data[i]["B9"]["current_bets"] == 1:
+                if i not in bets_dict:
+                    new_bet = Bets(match_id=match_id, match_hole_number=i, back_9_bets=1)
+                    db.session.add(new_bet)
+                    bets_dict[i] = new_bet
+                elif not bets_dict[i].back_9_bets:
+                    bets_dict[i].back_9_bets = 1
+        if match_data[i]["18"]["current_bets"] == 1:
+            if i not in bets_dict:
+                new_bet = Bets(match_id=match_id, match_hole_number=i, total_18_bets=1)
+                db.session.add(new_bet)
+            elif not bets_dict[i].total_18_bets:
+                bets_dict[i].total_18_bets = 1
+    db.session.commit()
+    
+    return jsonify({"error": False, "message": "Bets data saved"})
+
+@app.route('/apology')
+def apology_route():
+    message = request.args.get("message")
+    return apology(message)
 
 
+@app.route('/bets_results', methods=['GET'])
+@login_required
+@group_login_required
+@event_selected
+def betting_results():
+
+    # Get all rounds for the event    
+    # Send to template the rounds in the event (id, and number: name)
+    event = Event.query.get(session["event_id"])
+    if not event:
+        return apology("Event not found")
+    rounds = (Round.query
+                .filter_by(event_id=session["event_id"])
+                .all())
+    
+    rounds_data = [{"id": round.id, 
+                    "round_name": "R" + str(round.round_number) + " " + round.round_name} 
+                    for round in rounds]
+
+    return render_template("bets_results.html", 
+                           rounds=rounds_data,
+                           event_name=event.event_name
+                           )
+
+@app.route('/api/bet_results_data/<int:match_id>')
+def get_bet_results_data(match_id):
+    # Get match, team a and team b players and course from match joined load
+    
+    match = (Match.query
+            .options(
+                joinedload(Match.team_a).joinedload(Team.players).joinedload(Player.handicaps), 
+                joinedload(Match.team_b).joinedload(Team.players).joinedload(Player.handicaps), 
+                joinedload(Match.course_tee)
+            )
+            .filter_by(id=match_id)
+            .first()
+            )
+
+    scores = (Scores.query
+                .filter_by(match_id=match_id)
+                .all()
+                )
+    
+    team_a = {
+        "key": "team_a", 
+        "players": [
+            {
+                "id": player.id, 
+                "handicap_index": next(
+                    (
+                        handicap.player_hcp 
+                        for handicap in player.handicaps 
+                        if handicap.event_id == session["event_id"]
+                    ), 
+                    None
+                ),
+                "playing_hcp": None
+            } 
+            for player in match.team_a.players
+        ]
+    }
+    team_b = {
+        "key": "team_b", 
+        "players": [
+            {
+                "id": player.id, 
+                "handicap_index": next(
+                    (
+                        handicap.player_hcp 
+                        for handicap in player.handicaps 
+                        if handicap.event_id == session["event_id"]
+                    ), 
+                    None
+                ),
+                "playing_hcp": None
+            } 
+            for player in match.team_b.players
+        ]
+    }
+
+    course = match.course_tee
+    
+    for team in [team_a, team_b]:
+            for player in team["players"]:
+                player_index = player["handicap_index"]
+                if player_index:
+                    player["playing_hcp"] = playing_hcp(player_index, course.slope, course.rating, course.total_18_par)
+                else:
+                    player["playing_hcp"] = None
+
+    # Get holes from course_tee
+    holes = (Hole.query
+             .filter_by(course_id=course.id)
+             .order_by(Hole.hole_number)
+             .all()
+            )
+    
+    holes_data = {}
+    team_a_net_cumulative = 0
+    team_b_net_cumulative = 0
+    match_net_cumulative = 0
+
+    
+    for hole in holes:
+        hole_number = hole.hole_number
+        hole_hcp = hole.hole_hcp
+
+        for team in [team_a, team_b]:
+    
+            # Initialize total net score for team
+            team_total_net_score = 0
+            net_scores_on_hole = []
+            for player in team["players"]:
+                # Get player hcp
+                player_hcp = player["playing_hcp"]
+                # Calculate player strokes
+                player_strokes = 1 if hole_hcp <= player_hcp else 0
+                # Get player net score (needs match id, hole number, player id)
+                score = next((score for score in scores if score.match_hole_number == hole.hole_number and score.player_id == player["id"]), None)
+                if score:
+                    player_net = score.score - player_strokes - hole.par
+                else:
+                    player_net = None
+                # Add to net scores on hole list
+                net_scores_on_hole.append(player_net)
+            # Add lowest of two net scores to team total net score
+            # Filter out None values from net_scores_on_hole
+            filtered_scores = [score for score in net_scores_on_hole if score is not None]
+            if filtered_scores:
+                team_total_net_score += min(filtered_scores)
+                
+            # Update the team cumulative net score
+            if team["key"] == "team_a":
+                team_a_net_cumulative += team_total_net_score
+                match_net_cumulative -= team_total_net_score
+            else:
+                team_b_net_cumulative += team_total_net_score
+                match_net_cumulative += team_total_net_score
+
+        holes_data[hole_number] = {
+            "team_a_net_cumulative": team_a_net_cumulative, 
+            "team_b_net_cumulative": team_b_net_cumulative,
+            "match_net": match_net_cumulative,
+            "F9": {
+                "current_bets": 0,
+            },
+            "B9": {
+                "current_bets": 0,
+            },
+            "18": {
+                "current_bets": 0,
+            }
+        }
+
+    # Load bets in the match
+    bets = (Bets.query
+            .filter_by(match_id=match_id)
+            .all()
+            )
+    if bets:
+        for bet in bets:
+            hole_number = bet.match_hole_number
+            if hole_number in holes_data:
+                holes_data[hole_number]["F9"]["current_bets"] = bet.front_9_bets
+                holes_data[hole_number]["B9"]["current_bets"] = bet.back_9_bets
+                holes_data[hole_number]["18"]["current_bets"] = bet.total_18_bets
+    else:
+        # Add to bets table hole 1, 1 front 9 bet and 1 18 bet, and to hole 10, 1 back 9 bet
+        new_bet = Bets(match_id=match_id, match_hole_number=1, front_9_bets=1, back_9_bets = None, total_18_bets=1)
+        db.session.add(new_bet)
+        new_bet = Bets(match_id=match_id, match_hole_number=10, front_9_bets=None, back_9_bets = 1, total_18_bets=None)
+        db.session.add(new_bet)
+        db.session.commit()
+        holes_data[1]["F9"]["current_bets"] = 1
+        holes_data[1]["18"]["current_bets"] = 1
+        holes_data[10]["B9"]["current_bets"] = 1
+ 
+    # Use holes data, calculate winning bets
+    bets_results_data = {
+        "F9": {
+            "total_bets": 0,
+            "team_a_wins": 0,
+            "team_b_wins": 0,
+            "ties": 0,
+            "team_a_net": 0
+        },
+        "B9": {
+            "total_bets": 0,
+            "team_a_wins": 0,
+            "team_b_wins": 0,
+            "ties": 0,
+            "team_a_net": 0,
+        },
+        "18": {
+            "total_bets": 0,
+            "team_a_wins": 0,
+            "team_b_wins": 0,
+            "ties": 0,
+            "team_a_net": 0,
+        },
+        "Total": {
+            "total_bets": 0,
+            "team_a_wins": 0,
+            "team_b_wins": 0,
+            "ties": 0,
+            "team_a_net": 0,
+        }
+    }
+
+    for i in range (1, 19):
+        if (i < 10):
+            if holes_data[i]["F9"]["current_bets"] == 1:
+                bets_results_data["F9"]["total_bets"] += 1
+                ending_f9_AvsB = holes_data[9]["team_a_net_cumulative"] - holes_data[9]["team_b_net_cumulative"]
+                bet_start_f9_AvsB = holes_data[i - 1]["team_a_net_cumulative"] - holes_data[i - 1]["team_b_net_cumulative"]
+                if ending_f9_AvsB - bet_start_f9_AvsB < 0:
+                    bets_results_data["F9"]["team_a_net"] += 1
+                    bets_results_data["F9"]["team_a_wins"] += 1
+                elif ending_f9_AvsB - bet_start_f9_AvsB > 0:
+                    bets_results_data["F9"]["team_b_wins"] += 1
+                    bets_results_data["F9"]["team_a_net"] -= 1
+                else:
+                    bets_results_data["F9"]["ties"] += 1
+    # TO FINSIH REST OF RESULTS CALCULATIONS
+
+           
+   
+    
+
+    return jsonify(bets_results_data=bets_results_data)

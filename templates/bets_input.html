@@ -24,6 +24,9 @@
     <div class="mx-auto" id="bets-data-display">
         <!-- Data table populated with JavaScript -->
     </div>
+    <div class="mx-auto">
+        <button class="btn btn-primary" id="submit-bets" style="display: none;">Submit Bets</button>
+    </div>
 
     <script>
         const roundSelect = document.getElementById('round_select');
@@ -61,15 +64,18 @@
         // Add an event listener to match select, to fetch data on the round 
         // for each hole, will return hole_number, team a score, team b score, and match score
         let match_api_data;
+        let match_id;
         matchSelect.addEventListener('change', async () => {
 
-            const match_id = matchSelect.value;
+            match_id = matchSelect.value;
             const response = await fetch(`/api/match_data/${match_id}`);
             match_api_data = await response.json();
 
             const dataDisplay = document.getElementById('bets-data-display');
             dataDisplay.innerHTML = '';
 
+            document.getElementById('submit-bets').style.display = 'inline';
+            
             const table = document.createElement('table');
             const thead = document.createElement('thead');
             const tbody = document.createElement('tbody');
@@ -129,8 +135,6 @@
                 const matchScore = document.createElement('td');
                 matchScore.textContent = match_api_data[i].match_net;
                 holeRow.appendChild(matchScore);
-
-                
 
                 tbody.appendChild(holeRow);
             };
@@ -215,10 +219,6 @@
             betsCheckbox.addEventListener('change', () => {
                 // Update the current bet value for this hole
                 match_api_data[holeNumber][type]["current_bets"] = betsCheckbox.checked ? 1 : 0;
-                console.log("hole change");
-                console.log(holeNumber);
-                console.log("to");
-                console.log(match_api_data[holeNumber][type]["current_bets"]);
 
                 // Recalculate the available bets for each hole
                 recalculateAvailableBets();
@@ -256,13 +256,10 @@
                     }
                 }
             }
-            //TO CLEAR
-            console.log(match_api_data);
 
             // Clear and re-populate the bets column and select elements
             for (let i = 1; i <= 18; i++) {
                 const betsCell = document.querySelector(`#betsCell_${i}`);
-                console.log(betsCell.id);
                 editBetsCell(i, betsCell);
                 
             }
@@ -270,11 +267,8 @@
 
         function check_bet_availability(match_api_data, hole_number, bet_type) {
             let check_answer = true;
-            console.log("hole number check");
-            console.log(hole_number);
             if (bet_type == "F9") {
                 let latest_bet_hole = 1;
-                console.log("F9 check");
                 let latest_match_score = 0;
                 for (i = 2; i <= 9; i++) {
                     if (hole_number == i || match_api_data[i]["F9"]["current_bets"] == 1) {
@@ -318,5 +312,34 @@
             }
             return check_answer;
         }
+
+        // Send the updated match_api_data to process_bets server route
+        // to update the bets in the database after submit bets clicked
+        const submitBetsButton = document.getElementById('submit-bets');
+        submitBetsButton.addEventListener('click', async () => {
+            match_api_data["match_id"] = match_id;
+            
+            const response = await fetch('/process_bets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(match_api_data)
+            });
+            const result = await response.json();
+            console.log(result);
+
+            // Check if an error occurred
+            if (result.error) {
+                // Redirect to the apology page and send the error message
+
+                window.location.href = `/apology?message=${encodeURIComponent(result.message)}`;
+            } else {
+                // Redirect to the bets page
+                window.location.href = '/bets';
+            }
+        });
+
+
     </script>
 {% endblock %}

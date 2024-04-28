@@ -1,0 +1,233 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Bets Results
+{% endblock %}
+
+{% block main %}
+    
+    <p><b>Event Name: </b>{{ event_name }}</p>
+
+    <b>Round: </b>
+    <select name="round_select" id="round_select">
+        <option value="" disabled selected>Select a round</option>
+        {% for round in rounds %}
+            <option value="{{ round.id }}">{{ round.round_name }}</option>
+        {% endfor %}
+    </select>
+    <p></p>
+    <b>Match: </b>
+    <select id="match-select">
+        <!-- Options populated with JavaScript -->
+    </select>
+
+    <div class="mx-auto" id="bets-data-display">
+    <!-- Data populated with JavaScript -->
+    </div>
+
+    <script>
+        const roundSelect = document.getElementById('round_select');
+        const matchSelect = document.getElementById('match-select');
+        let data;
+
+        roundSelect.addEventListener('change', async () => {
+            const round_id = roundSelect.value;
+            const response = await fetch(`/api/matches/${round_id}`);
+            data = await response.json();
+
+            matchSelect.innerHTML = '';
+            //Add a default option non selectable
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select a match';
+            defaultOption.disabled = true;
+            defaultOption.selected = true;
+            matchSelect.appendChild(defaultOption);
+
+            //Add an option for each match
+            for (const match of data.matches) {
+                const option = document.createElement('option');
+                option.value = match.id;
+                option.textContent = match.matchup;
+                matchSelect.appendChild(option);
+            }
+
+            // Clear bets data display
+            const dataDisplay = document.getElementById('bets-data-display');
+            dataDisplay.innerHTML = '';
+
+        });
+
+        // Add an event listener to match select, to fetch data on the round 
+        // for each hole, will return hole_number, team a score, team b score, and match score
+        let results_api_data;
+        let match_id;
+        matchSelect.addEventListener('change', async () => {
+
+            match_id = matchSelect.value;
+            const response = await fetch(`/api/bet_results_data/${match_id}`);
+            results_api_data = await response.json();
+
+            const dataDisplay = document.getElementById('bets-data-display');
+            dataDisplay.innerHTML = '';
+
+            document.getElementById('submit-bets').style.display = 'inline';
+            
+            const table = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            table.classList.add('table');
+            table.classList.add('table-hover');
+            table.classList.add('table-striped');
+            
+            const headerRow = document.createElement('tr');
+
+            const headerHoles = document.createElement('th');
+            headerHoles.textContent = 'Holes';
+            headerRow.appendChild(headerHoles);
+            
+            const headerTotBets = document.createElement('th');
+            headerTotBets.textContent = 'Total Bets';
+            headerRow.appendChild(headerTotBets);
+
+            const headerAwins = document.createElement('th');
+            headerAwins.textContent = "A Wins";
+            headerRow.appendChild(headerAwins);
+
+            const headerBwins = document.createElement('th');
+            headerBwins.textContent = "B Wins";
+            headerRow.appendChild(headerBwins);
+
+            const headerPush = document.createElement('th');
+            headerPush.textContent = 'Push';
+            headerRow.appendChild(headerPush);
+
+            const headerAnet = document.createElement('th');
+            headerAnet.textContent = 'A Net';
+            headerRow.appendChild(headerAnet);
+
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+      
+            const F9Row = document.createElement('tr');
+
+            const F9title = document.createElement('td');
+            F9title.textContent = 'F9';
+            F9Row.appendChild(F9title);
+
+            const F9TotBets = document.createElement('td');
+            F9TotBets.textContent = "Todo";
+            F9Row.appendChild(F9TotBets);
+
+            const F9Awins = document.createElement('td');
+            F9Awins.textContent = "Todo";
+            F9Row.appendChild(F9Awins);
+
+            const F9Bwins = document.createElement('td');
+            F9Bwins.textContent = "Todo";
+            F9Row.appendChild(F9Bwins);
+
+            const F9Push = document.createElement('td');
+            F9Push.textContent = "Todo";
+            F9Row.appendChild(F9Push);
+
+            const F9Anet = document.createElement('td');
+            F9Anet.textContent = "Todo";
+            F9Row.appendChild(F9Anet);
+
+            tbody.appendChild(F9Row);
+
+            const B9Row = document.createElement('tr');
+
+            const B9title = document.createElement('td');
+            B9title.textContent = 'B9';
+            B9Row.appendChild(B9title);
+
+            const B9TotBets = document.createElement('td');
+            B9TotBets.textContent = "Todo";
+            B9Row.appendChild(B9TotBets);
+
+            const B9Awins = document.createElement('td');
+            B9Awins.textContent = "Todo";
+            B9Row.appendChild(B9Awins);
+
+            const B9Bwins = document.createElement('td');
+            B9Bwins.textContent = "Todo";
+            B9Row.appendChild(B9Bwins);
+
+            const B9Push = document.createElement('td');
+            B9Push.textContent = "Todo";
+            B9Row.appendChild(B9Push);
+
+            const B9Anet = document.createElement('td');
+            B9Anet.textContent = "Todo";
+            B9Row.appendChild(B9Anet);
+
+            tbody.appendChild(B9Row);
+
+            const Tot18Row = document.createElement('tr');
+
+            const Tot18title = document.createElement('td');
+            Tot18title.textContent = '18';
+            TotRow.appendChild(Tot18title);
+
+            const Tot18TotBets = document.createElement('td');
+            Tot18TotBets.textContent = "Todo";
+            TotRow.appendChild(Tot18TotBets);
+
+            const Tot18Awins = document.createElement('td');
+            Tot18Awins.textContent = "Todo";
+            TotRow.appendChild(Tot18Awins);
+
+            const Tot18Bwins = document.createElement('td');
+            Tot18Bwins.textContent = "Todo";
+            TotRow.appendChild(Tot18Bwins);
+
+            const Tot18Push = document.createElement('td');
+            Tot18Push.textContent = "Todo";
+            TotRow.appendChild(Tot18Push);
+
+            const Tot18Anet = document.createElement('td');
+            Tot18Anet.textContent = "Todo";
+            TotRow.appendChild(Tot18Anet);
+
+            tbody.appendChild(TotRow);
+
+            const TotalRow = document.createElement('tr');
+
+            const Totaltitle = document.createElement('td');
+            Totaltitle.textContent = 'Total';
+            TotalRow.appendChild(Totaltitle);
+
+            const TotalTotBets = document.createElement('td');
+            TotalTotBets.textContent = "Todo";
+            TotalRow.appendChild(TotalTotBets);
+
+            const TotalAwins = document.createElement('td');
+            TotalAwins.textContent = "Todo";
+            TotalRow.appendChild(TotalAwins);
+
+            const TotalBwins = document.createElement('td');
+            TotalBwins.textContent = "Todo";
+            TotalRow.appendChild(TotalBwins);
+
+            const TotalPush = document.createElement('td');
+            TotalPush.textContent = "Todo";
+            TotalRow.appendChild(TotalPush);
+
+            const TotalAnet = document.createElement('td');
+            TotalAnet.textContent = "Todo";
+            TotalRow.appendChild(TotalAnet);
+
+            tbody.appendChild(TotalRow);
+
+            table.appendChild(tbody);
+
+            dataDisplay.appendChild(table);
+        });
+
+        
+    </script>
+{% endblock %}
