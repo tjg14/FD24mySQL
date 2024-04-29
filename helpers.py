@@ -10,7 +10,7 @@ import math
 from flask import redirect, render_template, session
 from functools import wraps
 from sqlalchemy.orm import joinedload
-from app import Round, Team, Match, CourseTee, Handicap, Scores, Event
+from models import Round, Team, Match, CourseTee, Handicap, Scores, Event
 
 def apology(message, code=400):
     """Render message as an apology to user."""
@@ -136,7 +136,7 @@ def calculate_event_scores(event_id):
 
     # Get all rounds for the event
     rounds = (Round.query
-              .filter_by(event_id=session["event_id"])
+              .filter_by(event_id=event_id)
               .order_by(Round.round_number)
               .all())
     if not rounds:
@@ -144,7 +144,7 @@ def calculate_event_scores(event_id):
     
     # Get all teams and players for the event
     teams = (Team.query
-             .filter_by(event_id=session["event_id"])
+             .filter_by(event_id=event_id)
              .options(joinedload(Team.players))
              .all())
     
@@ -160,7 +160,7 @@ def calculate_event_scores(event_id):
     
     # Get all the handicaps for players in the event
     hcp_indexes = (Handicap.query
-                    .filter_by(event_id=session["event_id"])
+                    .filter_by(event_id=event_id)
                     .all())
     
     # Get all the scores in all the matches in the event's rounds
