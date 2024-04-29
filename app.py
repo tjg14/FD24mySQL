@@ -14,7 +14,7 @@ import logging
 from helpers import (apology, login_required, 
                      group_login_required, event_selected, usd, 
                      format_positive, format_none, playing_hcp, 
-                     check_bet_availability)
+                     check_bet_availability, calculate_event_scores)
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -93,6 +93,7 @@ class Event(db.Model):
     event_name = db.Column(db.String(50), nullable=False)
     group_id = db.Column(db.Integer, db.ForeignKey("golf_groups.id"), nullable=False)
     date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(15), nullable=False, server_default='INCOMPLETE')
 
 class Team(db.Model):
     __tablename__ = 'teams'
@@ -226,34 +227,36 @@ def index():
             return apology("group not found")
         
         # Get events dictionary for group_id
-        events = Event.query.filter_by(group_id=session["group_id"]).all()
-        
-        # Get data for rendering index.html tables of events..
-        # Add key to event dictionary for status of each event, 
-        # showing complete if >0 matches with Complete status
-        # and incomplete if any matches are incomplete
+        events = (db.session.query(Event, func.count(Round.id).label('rounds_count'))
+                    .outerjoin(Round, Event.id == Round.event_id)
+                    .filter(Event.group_id == session["group_id"])
+                    .group_by(Event.id)
+                    .all())
+
         events_with_status = []
-        for event in events:
-            complete_events_count = 0
-            incomplete_events_count = 0
-            complete_matches = db.session.query(func.count(Match.status)).filter(
-                Match.status == 'COMPLETE', Match.round_id.in_(
-                    db.session.query(Round.id).filter(Round.event_id == event.id)
-                )
-            ).scalar()
-            incomplete_matches = db.session.query(func.count(Match.status)).filter(
-                Match.status == 'INCOMPLETE', Match.round_id.in_(
-                    db.session.query(Round.id).filter(Round.event_id == event.id)
-                )
-            ).scalar()
-            event_dict = {**event.__dict__}
-            if complete_matches > 0 and not incomplete_matches:
-                event_dict["status"] = "Complete"
+        complete_events_count = 0
+        incomplete_events_count = 0
+        for event, rounds_count in events:
+            #event_dict = {**event.__dict__, 'rounds_count': rounds_count}
+            event_dict = {
+                "event_id": event.id,
+                "event_name": event.event_name,
+                "date": event.date,
+                "status": event.status,
+                "rounds_count": rounds_count,
+                "winner": None
+            }
+            if event.status == "COMPLETE":
                 complete_events_count += 1
+                event_dict["winner"] = get_event_winner(event.id)
             else:
-                event_dict["status"] = "Incomplete"
                 incomplete_events_count += 1
+
             events_with_status.append(event_dict)
+            
+        print(events_with_status)
+        print(complete_events_count)
+        print(incomplete_events_count)
 
         return render_template("index.html", 
                                groupname=groupname, 
@@ -831,117 +834,131 @@ def event_structure():
 def event_scoreboard():
     """Event Scoreboard"""
   
-    # Get event name
-    event = Event.query.get(session["event_id"])
-    if not event:
-        return apology("Event not found")
-    event_name = event.event_name
+    event_data = calculate_event_scores(session["event_id"])
 
-    # Get all rounds for the event
-    rounds = (Round.query
-              .filter_by(event_id=session["event_id"])
-              .order_by(Round.round_number)
-              .all())
-    if not rounds:
-        return apology("No Rounds Found")
-    
-    # Get all teams and players for the event
-    teams = (Team.query
-             .filter_by(event_id=session["event_id"])
-             .options(joinedload(Team.players))
-             .all())
-    
-    # Get all matches for the rounds in the event
-    matches = (Match.query
-               .filter(Match.round_id.in_([round.id for round in rounds]))
-               .all())
-
-    # Get all courses played in all the matches in the event's rounds
-    courses = (CourseTee.query
-                .filter(CourseTee.id.in_([match.course_id for match in matches]))
-                .all())
-    
-    # Get all the handicaps for players in the event
-    hcp_indexes = (Handicap.query
-                    .filter_by(event_id=session["event_id"])
-                    .all())
-    
-    # Get all the scores in all the matches in the event's rounds
-    scores = (Scores.query
-                .filter(Scores.match_id.in_([match.id for match in matches]))
-                .all())
-
-    # Initialize an empty list to store round data
-    rounds_data = []
-    cumulative_totals = {}
-
-    # For each round in rounds
-    for round in rounds:
-        # Initialize an empty dictionary to store team data
-        team_data = {}
-        # For each team in teams
-        for team in teams:
-            # Initialize total net score for team
-            team_total_net_score = 0
-            # Find the match in matches object that corresponds to the team and round
-            match = next((match for match in matches if match.round_id == round.id and (match.team_a_id == team.id or match.team_b_id == team.id)), None)
-            # Find what course the team played during this round
-            course_for_match = next((course for course in courses if course.id == match.course_id), None)
-            # Create a list of dictionaries for each player in the team, and add the player's playing handicap
-            players = [{"player_id": player.id, "player_name": player.player_name} for player in team.players]
-            for player in players:
-                player_index = next((hcp.player_hcp for hcp in hcp_indexes if hcp.player_id == player["player_id"]), None)
-                if player_index:
-                    course_hcp = player_index * float(course_for_match.slope) / 113 + (course_for_match.rating - course_for_match.total_18_par)
-                    player["playing_hcp"] = int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))
-                else:
-                    player["playing_hcp"] = None
-            
-            # For each hole in holes
-            for hole in course_for_match.holes:
-                # Get hole hcp
-                hole_hcp = hole.hole_hcp
-                net_scores_on_hole = []
-                for player in players:
-                    # Get player hcp
-                    player_hcp = player["playing_hcp"]
-                    # Calculate player strokes
-                    player_strokes = 1 if hole_hcp <= player_hcp else 0
-                    # Get player net score (needs match id, hole number, player id)
-                    score = next((score for score in scores if score.match_id == match.id and score.match_hole_number == hole.hole_number and score.player_id == player["player_id"]), None)
-                    if score:
-                        player_net = score.score - player_strokes - hole.par
-                    else:
-                        player_net = None
-                    # Add to net scores on hole list
-                    net_scores_on_hole.append(player_net)
-                # Add lowest of two net scores to team total net score
-                # Filter out None values from net_scores_on_hole
-                filtered_scores = [score for score in net_scores_on_hole if score is not None]
-                if filtered_scores:
-                    team_total_net_score += min(filtered_scores)
-                    
-            # Store the total net score for the team in team_data
-            team_data[team.team_name] = team_total_net_score
-            # Update the cumulative total for the team
-            if team.team_name in cumulative_totals:
-                cumulative_totals[team.team_name] += team_total_net_score
-            else:
-                cumulative_totals[team.team_name] = team_total_net_score
-
-        # Store the round number and team data in rounds_data
-        rounds_data.append({
-            "round_number": round.round_number,
-            "team_data": team_data
-        })
-
-    
     return render_template("leaderboard.html",
-                           event_name=event_name,
-                           rounds_data=rounds_data,
-                           teams=teams,
-                           cumulative_totals=cumulative_totals
+                           event_name=event_data.event_name,
+                           event_id = session["event_id"],
+                           event_status=event_data.event_status,
+                           rounds_data=event_data.rounds_data,
+                           teams=event_data.teams,
+                           cumulative_totals=event_data.cumulative_totals
     )
+    
+    # # Get event name
+    # event = Event.query.get(session["event_id"])
+    # if not event:
+    #     return apology("Event not found")
+    # event_name = event.event_name
+    # event_status = event.status
+
+    # # Get all rounds for the event
+    # rounds = (Round.query
+    #           .filter_by(event_id=session["event_id"])
+    #           .order_by(Round.round_number)
+    #           .all())
+    # if not rounds:
+    #     return apology("No Rounds Found")
+    
+    # # Get all teams and players for the event
+    # teams = (Team.query
+    #          .filter_by(event_id=session["event_id"])
+    #          .options(joinedload(Team.players))
+    #          .all())
+    
+    # # Get all matches for the rounds in the event
+    # matches = (Match.query
+    #            .filter(Match.round_id.in_([round.id for round in rounds]))
+    #            .all())
+
+    # # Get all courses played in all the matches in the event's rounds
+    # courses = (CourseTee.query
+    #             .filter(CourseTee.id.in_([match.course_id for match in matches]))
+    #             .all())
+    
+    # # Get all the handicaps for players in the event
+    # hcp_indexes = (Handicap.query
+    #                 .filter_by(event_id=session["event_id"])
+    #                 .all())
+    
+    # # Get all the scores in all the matches in the event's rounds
+    # scores = (Scores.query
+    #             .filter(Scores.match_id.in_([match.id for match in matches]))
+    #             .all())
+
+    # # Initialize an empty list to store round data
+    # rounds_data = []
+    # cumulative_totals = {}
+
+    # # For each round in rounds
+    # for round in rounds:
+    #     # Initialize an empty dictionary to store team data
+    #     team_data = {}
+    #     # For each team in teams
+    #     for team in teams:
+    #         # Initialize total net score for team
+    #         team_total_net_score = 0
+    #         # Find the match in matches object that corresponds to the team and round
+    #         match = next((match for match in matches if match.round_id == round.id and (match.team_a_id == team.id or match.team_b_id == team.id)), None)
+    #         # Find what course the team played during this round
+    #         course_for_match = next((course for course in courses if course.id == match.course_id), None)
+    #         # Create a list of dictionaries for each player in the team, and add the player's playing handicap
+    #         players = [{"player_id": player.id, "player_name": player.player_name} for player in team.players]
+    #         for player in players:
+    #             player_index = next((hcp.player_hcp for hcp in hcp_indexes if hcp.player_id == player["player_id"]), None)
+    #             if player_index:
+    #                 course_hcp = player_index * float(course_for_match.slope) / 113 + (course_for_match.rating - course_for_match.total_18_par)
+    #                 player["playing_hcp"] = int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))
+    #             else:
+    #                 player["playing_hcp"] = None
+            
+    #         # For each hole in holes
+    #         for hole in course_for_match.holes:
+    #             # Get hole hcp
+    #             hole_hcp = hole.hole_hcp
+    #             net_scores_on_hole = []
+    #             for player in players:
+    #                 # Get player hcp
+    #                 player_hcp = player["playing_hcp"]
+    #                 # Calculate player strokes
+    #                 player_strokes = 1 if hole_hcp <= player_hcp else 0
+    #                 # Get player net score (needs match id, hole number, player id)
+    #                 score = next((score for score in scores if score.match_id == match.id and score.match_hole_number == hole.hole_number and score.player_id == player["player_id"]), None)
+    #                 if score:
+    #                     player_net = score.score - player_strokes - hole.par
+    #                 else:
+    #                     player_net = None
+    #                 # Add to net scores on hole list
+    #                 net_scores_on_hole.append(player_net)
+    #             # Add lowest of two net scores to team total net score
+    #             # Filter out None values from net_scores_on_hole
+    #             filtered_scores = [score for score in net_scores_on_hole if score is not None]
+    #             if filtered_scores:
+    #                 team_total_net_score += min(filtered_scores)
+                    
+    #         # Store the total net score for the team in team_data
+    #         team_data[team.team_name] = team_total_net_score
+    #         # Update the cumulative total for the team
+    #         if team.team_name in cumulative_totals:
+    #             cumulative_totals[team.team_name] += team_total_net_score
+    #         else:
+    #             cumulative_totals[team.team_name] = team_total_net_score
+
+    #     # Store the round number and team data in rounds_data
+    #     rounds_data.append({
+    #         "round_number": round.round_number,
+    #         "team_data": team_data
+    #     })
+
+    
+    # return render_template("leaderboard.html",
+    #                        event_name=event_name,
+    #                        event_id = session["event_id"],
+    #                        event_status=event_status,
+    #                        rounds_data=rounds_data,
+    #                        teams=teams,
+    #                        cumulative_totals=cumulative_totals
+    #)
 
 @app.route("/courseadmin", methods=["GET", "POST"])
 @login_required
@@ -1846,7 +1863,7 @@ def get_bet_results_data(match_id):
             "ties": 0,
             "team_a_net": 0,
         },
-        "Total": {
+        "total": {
             "total_bets": 0,
             "team_a_wins": 0,
             "team_b_wins": 0,
@@ -1855,24 +1872,62 @@ def get_bet_results_data(match_id):
         }
     }
 
-    for i in range (1, 19):
-        if (i < 10):
-            if holes_data[i]["F9"]["current_bets"] == 1:
-                bets_results_data["F9"]["total_bets"] += 1
-                ending_f9_AvsB = holes_data[9]["team_a_net_cumulative"] - holes_data[9]["team_b_net_cumulative"]
-                bet_start_f9_AvsB = holes_data[i - 1]["team_a_net_cumulative"] - holes_data[i - 1]["team_b_net_cumulative"]
-                if ending_f9_AvsB - bet_start_f9_AvsB < 0:
-                    bets_results_data["F9"]["team_a_net"] += 1
-                    bets_results_data["F9"]["team_a_wins"] += 1
-                elif ending_f9_AvsB - bet_start_f9_AvsB > 0:
-                    bets_results_data["F9"]["team_b_wins"] += 1
-                    bets_results_data["F9"]["team_a_net"] -= 1
-                else:
-                    bets_results_data["F9"]["ties"] += 1
-    # TO FINSIH REST OF RESULTS CALCULATIONS
-
+    def update_bets_results(bets_results_data, holes_data, hole_number, hole_key):
+        bets_results_data[hole_key]["total_bets"] += 1
+        bets_results_data["total"]["total_bets"] += 1
+        ending_AvsB = (holes_data[18 if hole_key != "F9" else 9]["team_a_net_cumulative"] - 
+                       holes_data[18 if hole_key != "F9" else 9]["team_b_net_cumulative"])
+        if hole_number == 1:
+            bet_start_AvsB = 0
+        else:
+            bet_start_AvsB = (holes_data[hole_number - 1]["team_a_net_cumulative"] - 
+                            holes_data[hole_number - 1]["team_b_net_cumulative"])
+        if ending_AvsB < bet_start_AvsB:
+            bets_results_data[hole_key]["team_a_wins"] += 1
+            bets_results_data[hole_key]["team_a_net"] += 1
+            bets_results_data["total"]["team_a_wins"] += 1
+            bets_results_data["total"]["team_a_net"] += 1
+        elif ending_AvsB > bet_start_AvsB:
+            bets_results_data[hole_key]["team_b_wins"] += 1
+            bets_results_data[hole_key]["team_a_net"] -= 1
+            bets_results_data["total"]["team_b_wins"] += 1
+            bets_results_data["total"]["team_a_net"] -= 1
+        else:
+            bets_results_data[hole_key]["ties"] += 1
+            bets_results_data["total"]["ties"] += 1
+    
+    
+    for i in range(1, 19):
+        if i < 10 and holes_data[i]["F9"]["current_bets"] == 1:
+            update_bets_results(bets_results_data, holes_data, i, "F9")
+        elif i >= 10 and holes_data[i]["B9"]["current_bets"] == 1:
+            update_bets_results(bets_results_data, holes_data, i, "B9")
+        if holes_data[i]["18"]["current_bets"] == 1:
+            update_bets_results(bets_results_data, holes_data, i, "18")
            
    
-    
+    return jsonify(bets_results_data)
 
-    return jsonify(bets_results_data=bets_results_data)
+@app.route('/mark_event_as_complete', methods=['POST'])
+def mark_event_as_complete():
+    data = request.get_json()
+    event_id = data['event_id']
+    is_complete = data['is_complete']
+    
+    # Get all rounds and their matches for the event in one query
+    rounds = (Round.query
+                .options(joinedload(Round.matches))
+                .filter_by(event_id=event_id)
+                .all())
+
+    for round in rounds:
+        for match in round.matches:
+            match.status = "COMPLETE" if is_complete else "INCOMPLETE"
+
+    # Change status in events table also to complete
+    event = Event.query.get(event_id)
+    event.status = "COMPLETE" if is_complete else "INCOMPLETE"
+    
+    db.session.commit()
+   
+    return 'Success', 200

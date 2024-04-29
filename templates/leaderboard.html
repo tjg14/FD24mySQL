@@ -33,9 +33,28 @@
         </tbody>
     </table>
     <br>
-    <div>
+    <div class="mb-3">
         <form action="/event_structure" method="get">
             <button type="submit" class="btn btn-primary">Rounds, Matches, and Scorecards</button>
         </form>
     </div>
+    <p>Mark as complete</p>
+    Incomplete
+    <label class="switch">
+        <input type="checkbox" id="completion-toggle" {% if event_status == "COMPLETE" %}checked{% endif %}>
+        <span class="slider round"></span>
+    </label>
+    Complete
+
+    <script>
+        document.getElementById('completion-toggle').addEventListener('change', function() {
+          var xhr = new XMLHttpRequest();
+          xhr.open("POST", '/mark_event_as_complete', true);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(JSON.stringify({
+            event_id: '{{ event_id }}',
+            is_complete: this.checked
+          }));
+        });
+    </script>
 {% endblock %}

@@ -23,7 +23,7 @@
             </thead>
             <tbody>
                 {% for event in events %}
-                    {% if event.status == "Incomplete" %}
+                    {% if event.status == "INCOMPLETE" %}
                         <tr>
                             <td>
                                 <form action="/" method="post">
@@ -32,7 +32,7 @@
                                 </form>
                             </td>
                             <td>{{ event.date }}</td>
-                            <td>rounds tBD</td>
+                            <td>{{ event.rounds_count }}</td>
                         </tr>
                     {% endif %}
                 {% endfor %}
@@ -57,7 +57,7 @@
         </thead>
         <tbody>
             {% for event in events %}
-                {% if event.status == "Complete" %}
+                {% if event.status == "COMPLETE" %}
                     <tr>
                         <td>
                             <form action="/" method="post">
@@ -66,7 +66,7 @@
                             </form>
                         </td>
                         <td>{{ event.date }}</td>
-                        <td>rounds tBD</td>
+                        <td>{{ event.rounds_count }}</td>
                         <td>Winner tBD</td>
                     </tr>
                 {% endif %}

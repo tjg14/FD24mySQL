@@ -1,4 +1,9 @@
-To do - move complete to events?
+To do 
+-move complete to events?
+-edit /delete round
+-add more courses
+-css scorecard scroll
+
 
 
 CREATE TABLE users (
