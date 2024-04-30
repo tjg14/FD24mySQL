@@ -1137,7 +1137,7 @@ def scorecard_edit():
                          }
             holes_data.append(hole_data)
 
-        return render_template("scorecard_edit.html", 
+        return render_template("scorecard_input.html", 
                                holes=holes_data, 
                                course_display_name=course_display_name, 
                                match_id=match_id, 
