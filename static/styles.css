@@ -144,6 +144,18 @@ input[type="number"].scorecard_cell::-webkit-outer-spin-button {
     border: 1px solid #bbbbbb;
 }
 
+#course-handi-head {
+
+    font-size: small;
+    border: 1px solid #bbbbbb;
+}
+
+#course-handi-body {
+
+    font-size: smaller;
+    border: 1px solid #bbbbbb;
+}
+
 
 .switch {
   position: relative;

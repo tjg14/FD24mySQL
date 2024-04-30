@@ -1,8 +1,12 @@
 To do 
--move complete to events?
+-edit event settings (in progress) - allow handicap update
+-block activity if complete
 -edit /delete round
 -add more courses
 -css scorecard scroll
+-add email to user table
+-change passoword
+-recover password?
 
 
 
@@ -52,6 +56,7 @@ CREATE TABLE events (
     event_name VARCHAR(50) NOT NULL,
     group_id INT NOT NULL,
     date DATE NOT NULL,
+    status VARCHAR(15) NOT NULL DEFAULT 'INCOMPLETE'
     FOREIGN KEY (group_id) REFERENCES golf_groups(id)
 );
 

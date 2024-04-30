@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Course handicaps
+{% endblock %}
+
+{% block main %}
+    <div class="mb-3">
+        <p><b>Event Name:</b> {{ event_name }}</p>
+    </div>
+
+    <table class="table table-hover table-striped">
+        <thead id="course-handi-head">
+            <tr>
+                <th>Players (index)</th>
+                {% for course in handicap_data %}
+                    <th>{{ course.course_name }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody id="course-handi-body">
+            {% for player in players %}
+                <tr>
+                    <td>{{ player.player_name }} ({{ handicap_data[0].players_data.get(player.player_name).get('player_hcp')}})</td>
+                    {% for course in handicap_data %}
+                        <td>{{ course.players_data.get(player.player_name, {}).get('course_hcp', '-') }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% endblock %}
+
+

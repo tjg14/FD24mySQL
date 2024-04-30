@@ -11,7 +11,7 @@ from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
 import logging
 from database import db, SQLALCHEMY_DATABASE_URI
-from models import User, GolfGroup, GroupUserAssociation, Player, Event, Team, TeamRoster, CourseTee, Handicap, Match, Round, Scores, Hole
+from models import User, GolfGroup, GroupUserAssociation, Player, Event, Team, TeamRoster, CourseTee, Handicap, Match, Round, Scores, Hole, Bets
 
 from helpers import (apology, login_required, 
                      group_login_required, event_selected, usd, 
@@ -377,6 +377,7 @@ def players():
                                players=players_with_hcp, 
                                num_players=len(players)
                                )
+     
     
 
 @app.route("/edit_delete_player", methods=["GET", "POST"])
@@ -398,7 +399,7 @@ def edit_delete_player():
         if not player:
             return apology("Player not found.", 400)
         player_scores = Scores.query.filter_by(player_id=player.id).all()
-        if len(player_scores):
+        if len(player_scores) and edit_or_delete == "delete":
             return apology("Can't delete player with score history.", 400)
 
  
@@ -654,8 +655,8 @@ def event_structure():
                     "course_name": course_name + " - " +course_tees + " Tees",
                     "team_a": team_a, 
                     "team_b": team_b, 
-                    "team_a_score": "create fn", 
-                    "team_b_score": "create fn"
+                    "team_a_score": "", 
+                    "team_b_score": ""
                 })
             
             round_data = {
@@ -1006,9 +1007,9 @@ def scorecard():
                      .first()
                      .player_hcp
                     )
-        course_hcp = hcp_index * float(course.slope) / 113 + (course.rating - course.total_18_par)
-        playing_hcp = int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))
-        player["hcp"] = playing_hcp
+        if not hcp_index:
+            return apology("Missing handicap index")
+        player["hcp"] = playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par)
         player["front_9_total"] = 0
         player["back_9_total"] = 0
         player["total_18"] = 0
@@ -1777,3 +1778,103 @@ def mark_event_as_complete():
     db.session.commit()
    
     return 'Success', 200
+
+@app.route('/event_settings')
+@login_required
+@group_login_required
+@event_selected
+def event_settings():
+    
+    if request.method == "POST":
+      return apology("TODO post")
+    
+    else:
+        event = Event.query.get(session["event_id"])
+        if not event:
+            return apology("Event not found")
+        event_name = event.event_name
+        teams = Team.query.filter_by(event_id=session["event_id"]).all()
+        
+        num_teams = len(teams)
+        team_names = []
+        for team in teams:
+            team_names.append(team.team_name)
+        
+        group_players = Player.query.filter_by(group_id=session["group_id"]).all()
+        print(event_name)
+        print(team_names)
+        return render_template("event_settings.html", event_name=event_name, 
+                               num_teams=num_teams, team_names=team_names, 
+                               group_players=group_players)
+    
+
+@app.route('/course_handicaps')
+@login_required
+@group_login_required
+@event_selected
+def course_handicaps():
+    
+    # Using session event id to get all rouunds, and round ids to get all matches, and matches to get all course ids, get all courses
+    event = Event.query.get(session["event_id"])
+    if not event:
+        return apology("Event not found")
+    # Use joined load to get all matches in one query
+    rounds = (Round.query
+                .options(joinedload(Round.matches))
+                .filter_by(event_id=session["event_id"])
+                .all())
+    # Get all course ids from matches
+    course_ids = set()
+    for round in rounds:
+        for match in round.matches:
+            course_ids.add(match.course_id)
+    # Get all course data from course ids
+    courses = (CourseTee.query
+                .filter(CourseTee.id.in_(course_ids))
+                .all())
+    # Get all teams in the event
+    teams = (Team.query
+             .filter_by(event_id=session["event_id"])
+             .all())
+    # Get all player ids from team roster with those team ids
+    player_ids = set()
+    for team in teams:
+        for player in team.players:
+            player_ids.add(player.id)
+    
+    # Get all players in the event and their handicaps
+    
+    players = (Player.query
+                .options(joinedload(Player.handicaps))
+                .filter(Player.id.in_(player_ids))
+                .all())
+
+    handicap_data = []
+    for course in courses:
+        players_data = {}
+        for player in players:
+            hcp_index = next(
+                (
+                    handicap.player_hcp 
+                    for handicap in player.handicaps 
+                    if handicap.event_id == session["event_id"]
+                ), 
+                None
+            )
+
+            players_data[player.player_name] = {
+                "player_hcp": hcp_index,
+                "course_hcp": playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par),
+               }
+
+        handicap_for_course = {
+            "course_name": course.name + " - " + course.teebox + " Tees",
+            "players_data": players_data
+        }
+        handicap_data.append(handicap_for_course)
+    
+    print(handicap_data)
+    return render_template("course_handicaps.html", 
+                           handicap_data=handicap_data,
+                           players=players, 
+                           event_name=event.event_name)
