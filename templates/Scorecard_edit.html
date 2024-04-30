@@ -42,7 +42,7 @@
                         {% for hole in holes %}
                             <td>
                                 <!-- Input cell for each hole with indentifying hole number -->
-                                    <input autofocus class="scorecard_cell" type="number" step="1" name="score_hole_{{ hole.hole_number }}" value="{{ hole.score }}">
+                                    <input autofocus class="scorecard_cell" type="number" step="1" name="score_hole_{{ hole.hole_number }}" value="{{ hole.score if hole.score is not none else '' }}">
                             </td>
                         {% endfor %}
                     </tr>
@@ -57,6 +57,7 @@
         <button class="btn btn-primary" type="submit" id="submit_btn">Submit Scorecard</button>
         
     </form>
+    
     <br><br>
     <form action="/scorecard_processing" method="post" id="clear_form">
         <input type="hidden" name="match_id" value="{{ match_id }}">
