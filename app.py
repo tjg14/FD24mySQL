@@ -1827,6 +1827,8 @@ def course_handicaps():
                 .options(joinedload(Round.matches))
                 .filter_by(event_id=session["event_id"])
                 .all())
+    if not rounds:
+        return apology("Set up at least 1 round")
     # Get all course ids from matches
     course_ids = set()
     for round in rounds:
