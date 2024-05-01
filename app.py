@@ -542,6 +542,7 @@ def create_event_continued():
                   group_id=session["group_id"], 
                   date=event_date)
     db.session.add(new_event)
+    db.session.commit()
 
     # Insert into teams table all the team names, and event_id
     event_id = new_event.id
@@ -670,8 +671,6 @@ def event_structure():
         event_name = Event.query.filter_by(id=session["event_id"]).first().event_name
         teams = Team.query.filter_by(event_id=session["event_id"]).all()
 
-        if not rounds_data:
-            return apology("No rounds found")
         
         return render_template("event_structure.html", 
                                rounds=rounds_data, 
@@ -686,7 +685,12 @@ def event_structure():
 def event_scoreboard():
     """Event Scoreboard"""
   
+
     event_data = calculate_event_scores(session["event_id"])
+
+    if event_data.get("error"):
+        return apology(event_data["error"])
+
 
     return render_template("leaderboard.html",
                            event_name=event_data["event_name"],

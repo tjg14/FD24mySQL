@@ -1,5 +1,7 @@
 To do 
 -edit event settings (in progress) - allow handicap update
+-on calculate payout, also send bet amount to match table, and pull in when loading page
+- fix apology meme gen
 -block activity if complete
 -edit /delete round
 -add more courses

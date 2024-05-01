@@ -130,7 +130,8 @@ def calculate_event_scores(event_id):
         # Get event name
     event = Event.query.get(event_id)
     if not event:
-        return apology("Event not found")
+        return {"error": "Event not found"}
+
     event_name = event.event_name
     event_status = event.status
 
@@ -139,8 +140,8 @@ def calculate_event_scores(event_id):
               .filter_by(event_id=event_id)
               .order_by(Round.round_number)
               .all())
-    if not rounds:
-        return apology("No Rounds Found")
+
+
     
     # Get all teams and players for the event
     teams = (Team.query
