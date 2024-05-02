@@ -1894,8 +1894,7 @@ def course_handicaps():
                 .options(joinedload(Round.matches))
                 .filter_by(event_id=session["event_id"])
                 .all())
-    if not rounds:
-        return apology("Set up at least 1 round")
+
     # Get all course ids from matches
     course_ids = set()
     for round in rounds:
@@ -1923,7 +1922,38 @@ def course_handicaps():
                 .all())
 
     handicap_data = []
-    for course in courses:
+    if rounds:
+        for course in courses:
+            players_data = {}
+            for player in players:
+                hcp_index = next(
+                    (
+                        handicap.player_hcp 
+                        for handicap in player.handicaps 
+                        if handicap.event_id == session["event_id"]
+                    ), 
+                    None
+                )
+
+                players_data[player.id] = {
+                    "player_name": player.player_name,
+                    "player_hcp": hcp_index,
+                    "course_hcp": playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par),
+                }
+
+            handicap_for_course = {
+                "course_name": course.name + " - " + course.teebox + " Tees",
+                "players_data": players_data
+            }
+            handicap_data.append(handicap_for_course)
+        
+        print(handicap_data)
+        return render_template("course_handicaps.html", 
+                            handicap_data=handicap_data,
+                            players=players, 
+                            event_name=event.event_name
+                            )
+    else:
         players_data = {}
         for player in players:
             hcp_index = next(
@@ -1938,21 +1968,18 @@ def course_handicaps():
             players_data[player.id] = {
                 "player_name": player.player_name,
                 "player_hcp": hcp_index,
-                "course_hcp": playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par),
-               }
+                "course_hcp": None
+            }
 
-        handicap_for_course = {
-            "course_name": course.name + " - " + course.teebox + " Tees",
+        handicap_data = [{
+            "course_name": None,
             "players_data": players_data
-        }
-        handicap_data.append(handicap_for_course)
-    
-    print(handicap_data)
-    return render_template("course_handicaps.html", 
-                           handicap_data=handicap_data,
-                           players=players, 
-                           event_name=event.event_name)
-
+        }]
+        return render_template("course_handicaps.html", 
+                            handicap_data=handicap_data,
+                            players=players, 
+                            event_name=event.event_name
+                            )
 
 @app.route('/api/course_hcp', methods=['POST'])
 def course_hcp():
