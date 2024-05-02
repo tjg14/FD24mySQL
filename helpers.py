@@ -142,7 +142,6 @@ def calculate_event_scores(event_id):
               .all())
 
 
-    
     # Get all teams and players for the event
     teams = (Team.query
              .filter_by(event_id=event_id)
@@ -190,8 +189,7 @@ def calculate_event_scores(event_id):
             for player in players:
                 player_index = next((hcp.player_hcp for hcp in hcp_indexes if hcp.player_id == player["player_id"]), None)
                 if player_index:
-                    course_hcp = player_index * float(course_for_match.slope) / 113 + (course_for_match.rating - course_for_match.total_18_par)
-                    player["playing_hcp"] = int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))
+                    player["playing_hcp"] = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par)
                 else:
                     player["playing_hcp"] = None
             

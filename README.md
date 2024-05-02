@@ -1,6 +1,7 @@
 To do 
--allow play off low handicap
--edit event settings (in progress) - allow handicap update
+-on course handicaps allow extra column pick any course, recal handicaps
+-allow play off low handicap to event settings page
+- 85% as option not hardcode
 -on calculate payout, also send bet amount to match table, and pull in when loading page
 -block activity if complete
 -edit /delete round

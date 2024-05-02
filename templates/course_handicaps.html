@@ -17,19 +17,97 @@
                 {% for course in handicap_data %}
                     <th>{{ course.course_name }}</th>
                 {% endfor %}
+                    <th id="select_other_course_header">
+                        
+                    </th>
             </tr>
         </thead>
         <tbody id="course-handi-body">
             {% for player in players %}
+            <input type="hidden" name="player_id" value="{{ player.id }}" id="player_id_{{ loop.index0 }}">
+            <input type="hidden" name="player_name" value="{{ player.player_name }}" id="player_name_{{loop.index0}}">
+            <input type="hidden" name="player_hcp" value="{{ handicap_data[0].players_data.get(player.id).get('player_hcp') }}" id="hcp_{{loop.index0}}">
                 <tr>
-                    <td>{{ player.player_name }} ({{ handicap_data[0].players_data.get(player.player_name).get('player_hcp')}})</td>
+                    <td>{{ player.player_name }} ({{ handicap_data[0].players_data.get(player.id).get('player_hcp')}})</td>
                     {% for course in handicap_data %}
-                        <td>{{ course.players_data.get(player.player_name, {}).get('course_hcp', '-') }}</td>
+                        <td>{{ course.players_data.get(player.id, {}).get('course_hcp', '-') }}</td>
                     {% endfor %}
+                    <td id="player_hcp_other_course_{{loop.index0}}"></td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
+
+    <script>
+
+
+        // Add a select element to the last cell in the header row after page load
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            let otherCourseCell = document.getElementById('select_other_course_header');
+            fetch('/api/courses')
+                .then(response => response.json())
+                .then(courses => {
+                    // Create a select element
+                    let selectCourse = document.createElement('select');
+                    selectCourse.name = 'course_select';
+
+                    let defaultCourseOption = document.createElement("option");
+                    defaultCourseOption.value = "";
+                    defaultCourseOption.text = "Select a course";
+                    defaultCourseOption.disabled = true;
+                    defaultCourseOption.selected = true;
+                    selectCourse.appendChild(defaultCourseOption);
+
+                    // Add an option for each course
+                    courses.forEach(course => {
+                        let optionCourse = document.createElement('option');
+                        optionCourse.value = course.id; 
+                        optionCourse.text = course.name; 
+                        selectCourse.appendChild(optionCourse);
+                    });
+
+                    // Append the select element to the cell
+                    otherCourseCell.appendChild(selectCourse);
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        // Add event listener for when a course is selected
+        document.addEventListener('change', (event) => {
+            if (event.target.name === 'course_select') {
+                
+                let course_id = event.target.value;
+                let num_players = document.querySelectorAll('[name="player_id"]').length;
+                console.log(num_players);
+                
+                for (let i = 0; i < num_players; i++) {
+                    let player_id = document.getElementById('player_id_' + i).value;
+                    let player_name = document.getElementById('player_name_' + i).value;
+                    let player_hcp = document.getElementById('hcp_' + i).value;
+                    let player_hcp_other_course = document.getElementById('player_hcp_other_course_' + i);
+                    console.log(player_id, player_name, player_hcp, course_id);
+                    fetch('/api/course_hcp', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            player_id: player_id,
+                            player_name: player_name,
+                            player_hcp: player_hcp,
+                            course_id: course_id
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        player_hcp_other_course.innerText = data.course_hcp;
+                    })
+                    .catch(error => console.error('Error:', error));
+                }
+            }
+        });
+    </script>
 
 {% endblock %}
 

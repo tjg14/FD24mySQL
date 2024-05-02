@@ -12,81 +12,68 @@
     <table class="table table-hover table-striped">
         <thead>
             <tr>
-                <th colspan="2">Team Names</th>
+                <th colspan="2">Edit Team Names</th>
             </tr>
         </thead>
         <tbody>
-            {% for team in team_names %}
+            {% for team in teams_data %}
                 <tr>
-                    <td>{{ team }}</td>
-                    <td>
-                        <form action="/event_settings" method="post">
-                            <input name="team_name" value="{{ team }}" type="hidden">
-                            <input name="team_name_edit_or_delete" value="edit" type="hidden">
-                            <button class="btn btn-primary" type="submit">Edit</button>
-                        </form>
-                        <form action="/event_settings" method="post">
-                            <input name="team_name" value="{{ team }}" type="hidden">
-                            <input name="team_name_edit_or_delete" value="delete" type="hidden">
-                            <button class="btn btn-primary" type="submit">Delete</button>
-                        </form>
-                    </td>
+                    <form action="/event_settings" method="post">
+                        <td id="team_name_new">
+                            <input name="team_name_new" value="{{ team.team_name }}" type="text">
+                            <input name="team_id" value="{{ team.team_id }}" type="hidden">
+                        </td>
+                        <td>
+                                <button class="btn btn-primary" type="submit">Update</button>
+                        </td>
+                    </form>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <form id="edit_team_roster_hcp" action="/event_settings" method="post">
+    <form id="edit_hcps" action="/event_settings" method="post">
+        <input type="hidden" name="num_teams" value="{{ num_teams }}">
         <div>
             <table class="table table-hover table-striped">
                 <thead>
                     <tr>
-                        <th>Team Rosters</th>
+                        <th colspan="2">Edit Handicap Indexes</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for team in team_names %}
+                    {% for team in teams_data %}
                         <tr>
-                            <td><b>{{ team }}  - Players</b></td>
-                            <input type="hidden" name="team_name_{{ loop.index0 }}" value="{{ team }}">
+                            <td colspan="2"><b>{{ team.team_name }}  - Players</b></td>
                         </tr>
                         <tr>
                             <td>
-                                <span>
-                                    <div>
-                                        <select class="form-control" name="player_a_team_{{ loop.index0 }}">
-                                            <option selected disabled>Player A</option>
-                                            {% for player in group_players %} 
-                                                <option value="{{ player.id }}">{{ player.player_name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </span>
-                                <span><input class="form-control mx-auto w-auto" name="hcp_player_a_team_{{ loop.index0 }}" type="number" step="0.1" placeholder="HCP"></span>
+                                {{team.players[0].player_name}}
+                            </td>
+                            <td>    
+                                <input class="form-control mx-auto w-auto" name="player_a_hcp_team_{{ loop.index0 }}" type="number" step="0.1" value="{{team.players[0].hcp_index}}">
+                                <input name="player_a_id_team_{{ loop.index0 }}" value="{{team.players[0].player_id}}" type="hidden">
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <span>
-                                    <div>
-                                        <select class="form-control" name="player_b_team_{{ loop.index0 }}">
-                                            <option selected disabled>Player B</option>
-                                            {% for player in group_players %} 
-                                                <option value="{{ player.id }}">{{ player.player_name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                </span>
-                                <span><input class="form-control mx-auto w-auto" name="hcp_player_b_team_{{ loop.index0 }}" type="number" step="0.1" placeholder="HCP"></span>
+                                {{team.players[1].player_name}}
+                            </td>
+                            <td>    
+                                <input class="form-control mx-auto w-auto" name="player_b_hcp_team_{{ loop.index0 }}" type="number" step="0.1" value="{{team.players[1].hcp_index}}">
+                                <input name="player_b_id_team_{{ loop.index0 }}" value="{{team.players[1].player_id}}" type="hidden">
                             </td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <button class="btn btn-primary" id="create_event" type="submit">Update Handicaps</button>
     </form>
 
-    <button class="btn btn-primary" id="create_event" type="submit">Submit Teams</button>
+
+
+
 
 {% endblock %}
 

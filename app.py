@@ -1783,33 +1783,100 @@ def mark_event_as_complete():
    
     return 'Success', 200
 
-@app.route('/event_settings')
+@app.route('/event_settings', methods=['GET', 'POST'])
 @login_required
 @group_login_required
 @event_selected
 def event_settings():
     
     if request.method == "POST":
-      return apology("TODO post")
+      
+        team_name_new = request.form.get("team_name_new")
+        team_id = request.form.get("team_id")
+        if team_name_new:
+            # Update team name in database
+            team = Team.query.get(team_id)
+            team.team_name = team_name_new
+            db.session.commit()
+            return redirect("/")
+      
+        def update_handicap(player_id, player_hcp):
+            if player_id:
+                handicap = (Handicap.query
+                            .filter_by(player_id=player_id, event_id=session["event_id"])
+                            .first()
+                            )
+                if handicap:
+                    handicap.player_hcp = player_hcp
+                else:
+                    return apology(f"Handicap not found for player {player_id}")
+
+        handicaps = Handicap.query.filter_by(event_id=session["event_id"]).all()
+        hcp_form_submitted = request.form.get("player_a_id_team_0")
+        num_teams = request.form.get("num_teams")
+
+        if hcp_form_submitted:
+            for i in range(0, int(num_teams)):
+                first_player_id = request.form.get(f"player_a_id_team_{i}")
+                first_player_handicap = request.form.get(f"player_a_hcp_team_{i}")
+                second_player_id = request.form.get(f"player_b_id_team_{i}")
+                second_player_handicap = request.form.get(f"player_b_hcp_team_{i}")
+
+                update_handicap(first_player_id, first_player_handicap)
+                update_handicap(second_player_id, second_player_handicap)
+
+        db.session.commit()
+        return redirect("/")
     
     else:
         event = Event.query.get(session["event_id"])
         if not event:
             return apology("Event not found")
         event_name = event.event_name
-        teams = Team.query.filter_by(event_id=session["event_id"]).all()
+        # Get all teams and players for the event
+        teams = (Team.query
+                .filter_by(event_id=session["event_id"])
+                .options(joinedload(Team.players))
+                .all())
+
+        handicaps = Handicap.query.filter_by(event_id=session["event_id"]).all()
         
-        num_teams = len(teams)
-        team_names = []
+        teams_data = []
+        
         for team in teams:
-            team_names.append(team.team_name)
+            players_data = []
+            for player in team.players:
+                hcp_index = next(
+                    (
+                        handicap.player_hcp 
+                        for handicap in handicaps 
+                        if handicap.player_id == player.id
+                    ), 
+                    None
+                )
+                players_data.append({
+                    "player_id": player.id,
+                    "player_name": player.player_name,
+                    "hcp_index": hcp_index
+                })
         
+            team = {
+                "team_id": team.id,
+                "team_name": team.team_name,
+                "players": players_data
+            }
+            teams_data.append(team)
+
+        num_teams = len(teams_data)
         group_players = Player.query.filter_by(group_id=session["group_id"]).all()
-        print(event_name)
-        print(team_names)
-        return render_template("event_settings.html", event_name=event_name, 
-                               num_teams=num_teams, team_names=team_names, 
-                               group_players=group_players)
+
+
+        return render_template("event_settings.html", 
+                               event_name=event_name, 
+                               num_teams=num_teams, 
+                               teams_data=teams_data,
+                               group_players=group_players
+                               )
     
 
 @app.route('/course_handicaps')
@@ -1868,7 +1935,8 @@ def course_handicaps():
                 None
             )
 
-            players_data[player.player_name] = {
+            players_data[player.id] = {
+                "player_name": player.player_name,
                 "player_hcp": hcp_index,
                 "course_hcp": playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par),
                }
@@ -1884,3 +1952,21 @@ def course_handicaps():
                            handicap_data=handicap_data,
                            players=players, 
                            event_name=event.event_name)
+
+
+@app.route('/api/course_hcp', methods=['POST'])
+def course_hcp():
+    data = request.get_json()  # Get JSON data from the request
+
+    player_id = data["player_id"]
+    player_name = data["player_name"]
+    player_hcp = float(data["player_hcp"])
+    course_id = data["course_id"]
+
+    course = CourseTee.query.get(course_id)
+    
+    # Calculate course handicap
+    course_handicap = playing_hcp(player_hcp, course.slope, course.rating, course.total_18_par)
+
+    # Return a response
+    return jsonify(course_hcp=course_handicap)
