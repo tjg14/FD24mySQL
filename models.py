@@ -6,6 +6,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(30), unique=True, nullable=False)
     hash = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(60), nullable=False)
 
 class GolfGroup(db.Model):
     __tablename__ = 'golf_groups'
@@ -107,6 +108,7 @@ class Match(db.Model):
     team_a_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
     team_b_id = db.Column(db.Integer, db.ForeignKey("teams.id"), nullable=False)
     status = db.Column(db.String(15), nullable=False, server_default='INCOMPLETE')
+    bet_amt = db.Column(db.Integer)
 
     team_a = db.relationship('Team', foreign_keys=[team_a_id])
     team_b = db.relationship('Team', foreign_keys=[team_b_id])

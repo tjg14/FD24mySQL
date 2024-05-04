@@ -126,12 +126,15 @@ def register():
         username = request.form.get("username")
         password = request.form.get("password")
         confirmation = request.form.get("confirmation")
+        email = request.form.get("email")
         # Ensure all fields not blank
         if not username or not password or not confirmation:
             return apology("Missing username, password, or confirmation.", 400)
-
+        if not email:
+            return apology("Missing email.", 400)
         # Convert username to lowercase
         username = username.lower()
+        email = email.lower()
 
         # Check if password matches confirmation, else return apology
         if password != confirmation:
@@ -141,7 +144,8 @@ def register():
         # Using unique constraint to make sure username doesn't already exist
         try:
             new_user = User(username=username, 
-                            hash=generate_password_hash(password))
+                            hash=generate_password_hash(password),
+                            email=email)
             db.session.add(new_user)
             db.session.commit()
         except IntegrityError:
@@ -1982,6 +1986,9 @@ def course_handicaps():
                             )
 
 @app.route('/api/course_hcp', methods=['POST'])
+@login_required
+@group_login_required
+@event_selected
 def course_hcp():
     data = request.get_json()  # Get JSON data from the request
 
@@ -1997,3 +2004,30 @@ def course_hcp():
 
     # Return a response
     return jsonify(course_hcp=course_handicap)
+
+
+@app.route('/api/bet_amt/<int:match_id>', methods=['GET', 'POST'])
+@login_required
+@group_login_required
+@event_selected
+def get_bet_amt(match_id):
+    
+    if request.method == "POST":
+        bet_amt = request.get_json().get("bet_amt")
+        if not bet_amt:
+            return jsonify(error="Bet amount not sent in POST request")
+        try:
+            int(bet_amt)
+        except ValueError:
+            return jsonify(error="Bet amount must be an integer")
+        match = Match.query.get(match_id)
+        if not match:
+            return jsonify(error="Match not found")
+        match.bet_amt = bet_amt
+        db.session.commit()
+        return jsonify(success="Bet amount saved")
+    else:
+        match = Match.query.get(match_id)
+        if not match:
+            return jsonify(error="Match not found")
+        return jsonify(bet_amt=match.bet_amt)

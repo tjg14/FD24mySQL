@@ -26,12 +26,16 @@
     <div class="mx-auto" id="bets-data-display">
     <!-- Data populated with JavaScript -->
     </div>
+    <div class="mb-3" id="per_bet_text" style="display: none;">
+        <p><i>$ per bet:</i></p>
+    </div>
+    
     <div class="mb-b">
         <input class="form-control mx-auto w-auto" type="number" id="bet-amount" placeholder="$ per bet" style="display: none;">
     </div>
     <br>
     <div class="mb-3">
-        <button class="btn btn-primary" id="calculate-payout" style="display: none;">Calculate Payout</button>
+        <button class="btn btn-success" id="calculate-payout" style="display: none;">Calculate Payout</button>
     </div>
     <div class="mb-3">
         <p id="payout-result" style="display: none;"></p>
@@ -43,6 +47,11 @@
     <script>
         const roundSelect = document.getElementById('round_select');
         const matchSelect = document.getElementById('match-select');
+        const calculatePayoutButton = document.getElementById('calculate-payout');
+        const perBetText_pTag = document.getElementById('per_bet_text');
+        let payoutResult_pTag = document.getElementById('payout-result')
+        let teamNamePayout_pTag = document.getElementById('team_name_payout');
+        let betAmount_input = document.getElementById('bet-amount');
         let data;
 
         roundSelect.addEventListener('change', async () => {
@@ -71,6 +80,11 @@
             // Clear bets data display
             const dataDisplay = document.getElementById('bets-data-display');
             dataDisplay.innerHTML = '';
+            perBetText_pTag.style.display = 'none';
+            betAmount_input.style.display = 'none';
+            calculatePayoutButton.style.display = 'none';
+            payoutResult_pTag.style.display = 'none';
+            teamNamePayout_pTag.style.display = 'none';
 
         });
 
@@ -83,13 +97,20 @@
             match_id = matchSelect.value;
             const response = await fetch(`/api/bet_results_data/${match_id}`);
             results_api_data = await response.json();
+            console.log(results_api_data);
 
 
             const dataDisplay = document.getElementById('bets-data-display');
             dataDisplay.innerHTML = '';
+            perBetText_pTag.style.display = 'none';
 
-            document.getElementById('bet-amount').style.display = 'inline';
-            document.getElementById('calculate-payout').style.display = 'inline';
+
+            betAmount_input.value = '';
+            betAmount_input.style.display = 'inline';
+            payoutResult_pTag.innerHTML = '';
+            calculatePayoutButton.style.display = 'inline';
+            perBetText_pTag.style.display = 'inline';
+            teamNamePayout_pTag.innerHTML = '';
             
             const table = document.createElement('table');
             const thead = document.createElement('thead');
@@ -102,7 +123,6 @@
             table.classList.add('table-striped');
             
             const headerRow = document.createElement('tr');
-            
 
             const headerHoles = document.createElement('th');
             headerHoles.textContent = 'Bet Type';
@@ -248,28 +268,52 @@
 
             dataDisplay.appendChild(table);
 
-            document.getElementById('calculate-payout').addEventListener('click', function() {
-                const betAmount = document.getElementById('bet-amount').value;
-                // Calculate the payout based on the bet amount
-                const payout = betAmount * results_api_data["total"].team_a_net;
+
+            async function calculateAndShowPayout(betAmount) {
+                let payout = betAmount * results_api_data["total"].team_a_net;
                 // Show the payout result
-                var payoutResult = document.getElementById('payout-result');
-                payoutResult.style.display = 'inline';
-                payoutResult.textContent = '$' + payout;
-                if (payout < 0) {
-                    payoutResult.style.color = 'red';
-                } else {
-                    payoutResult.style.color = 'green';
-                }
-                var teamNamePayout = document.getElementById('team_name_payout');
-                teamNamePayout.style.display = 'inline';
-                console.log(data.matches);
-                console.log(match_id);
+                payoutResult_pTag.style.display = 'inline';
+                payoutResult_pTag.textContent = '$' + payout;
+                payoutResult_pTag.style.color = payout < 0 ? 'red' : 'green';
+
+                teamNamePayout_pTag.style.display = 'inline';
                 var match_found = data.matches.find(dict => dict.id == match_id);
-                console.log(match_found);
-                teamNamePayout.textContent = 'for team ' + match_found.team_a_name;
-                teamNamePayout.style.fontStyle = 'italic';
+                teamNamePayout_pTag.textContent = 'for team ' + match_found.team_a_name;
+                teamNamePayout_pTag.style.fontStyle = 'italic';
+            }
+
+            // Send request to /api/bet_amt to get bet_amt based on match _id
+            const bet_response = await fetch(`/api/bet_amt/${match_id}`);
+            bet_amt_api_data = await bet_response.json();
+            console.log(bet_amt_api_data);
+            let betAmount = bet_amt_api_data.bet_amt;
+
+            if (betAmount !== null && betAmount !== undefined) {
+                // Add betamount to input cell
+                betAmount_input.value = betAmount;
+                calculateAndShowPayout(betAmount);
+            }
+
+            document.getElementById('calculate-payout').addEventListener('click', function() {
+                betAmount = betAmount_input.value;
+                calculateAndShowPayout(betAmount);
+                saveBet(betAmount);
             });
+
+            // Async function to save the bet to new /api/bet_amt route via post
+            async function saveBet(betAmount) {
+                const save_response = await fetch(`/api/bet_amt/${match_id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        bet_amt: betAmount,
+                    })
+                });
+                const save_data = await save_response.json();
+                console.log(save_data);
+            }
 
         });
 

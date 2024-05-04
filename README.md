@@ -1,13 +1,13 @@
 To do 
--on course handicaps allow extra column pick any course, recal handicaps
+-go through routes for race conditions
+-fix nones on course handicaps
 -allow play off low handicap to event settings page
 - 85% as option not hardcode
--on calculate payout, also send bet amount to match table, and pull in when loading page
 -block activity if complete
 -edit /delete round
 -add more courses
 -css scorecard scroll
--add email to user table
+
 -change passoword
 -recover password?
 
@@ -16,6 +16,7 @@ To do
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(30) NOT NULL,
+    email VARCHAR(60) NOT NULL,
     hash VARCHAR(255) NOT NULL
 );
 
@@ -114,6 +115,7 @@ CREATE TABLE matches (
     team_a_id INT NOT NULL,
     team_b_id INT NOT NULL,
     status VARCHAR(15) NOT NULL DEFAULT 'INCOMPLETE',
+    bet_amt INT,
     FOREIGN KEY (round_id) REFERENCES rounds(id),
     FOREIGN KEY (course_id) REFERENCES course_tee(id),
     FOREIGN KEY (team_a_id) REFERENCES teams(id),
