@@ -1,6 +1,9 @@
 To do 
+
+-can turn on/off play_on_low & added to leaderboard, need to fix bets & other routes
 -go through routes for race conditions
 -fix nones on course handicaps
+-scroll scorecard
 -allow play off low handicap to event settings page
 - 85% as option not hardcode
 -block activity if complete
@@ -60,7 +63,8 @@ CREATE TABLE events (
     event_name VARCHAR(50) NOT NULL,
     group_id INT NOT NULL,
     date DATE NOT NULL,
-    status VARCHAR(15) NOT NULL DEFAULT 'INCOMPLETE'
+    status VARCHAR(15) NOT NULL DEFAULT 'INCOMPLETE',
+    play_off_min BOOLEAN NOT NULL DEFAULT 0,
     FOREIGN KEY (group_id) REFERENCES golf_groups(id)
 );
 

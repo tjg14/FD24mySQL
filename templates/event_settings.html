@@ -20,7 +20,7 @@
                 <tr>
                     <form action="/event_settings" method="post">
                         <td id="team_name_new">
-                            <input name="team_name_new" value="{{ team.team_name }}" type="text">
+                            <input class="form-control mx-auto w-auto" name="team_name_new" value="{{ team.team_name }}" type="text">
                             <input name="team_id" value="{{ team.team_id }}" type="hidden">
                         </td>
                         <td>
@@ -70,8 +70,42 @@
         </div>
         <button class="btn btn-success" id="create_event" type="submit">Update Handicaps</button>
     </form>
+    <p></p>
+    <p>Play Off Low Handicap</p>
+    No
+    <label class="switch">
+        <input type="checkbox" id="play-off-min-toggle" {% if play_off_min %}checked{% endif %}>
+        <span class="slider round"></span>
+    </label>
+    Yes
 
-
+    <script>
+        document.getElementById('play-off-min-toggle').addEventListener('change', function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", '/update_play_off_min', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onload = function () {
+                var response = JSON.parse(xhr.responseText);
+                if (xhr.status >= 200 && xhr.status < 300 && !response.error) {
+                    console.log('Success:', response);
+                } else {
+                    var errorMessage = response.error ? response.error : xhr.statusText;
+                    console.log('Error:', errorMessage);
+                    window.location.href = '/apology?message=' + encodeURIComponent(errorMessage);
+                }
+            };
+            xhr.onerror = function () {
+                // There was a connection error
+                console.log('Connection error');
+                // Redirect to the /apology route with the error message
+                window.location.href = '/apology?message=' + encodeURIComponent('Connection error');
+            };
+            xhr.send(JSON.stringify({
+                event_id: '{{ event_id }}',
+                play_off_min: this.checked
+            }));
+        });
+    </script>
 
 
 

@@ -38,6 +38,7 @@ class Event(db.Model):
     group_id = db.Column(db.Integer, db.ForeignKey("golf_groups.id"), nullable=False)
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(15), nullable=False, server_default='INCOMPLETE')
+    play_off_min = db.Column(db.Boolean, nullable=False, server_default='0')
 
 class Team(db.Model):
     __tablename__ = 'teams'

@@ -127,13 +127,14 @@ def check_bet_availability(holes_data, hole_number, bet_type):
 def calculate_event_scores(event_id):
     """Calculate team that won an event"""
   
-        # Get event name
+    # Get event name
     event = Event.query.get(event_id)
     if not event:
         return {"error": "Event not found"}
 
     event_name = event.event_name
     event_status = event.status
+    play_off_min = event.play_off_min
 
     # Get all rounds for the event
     rounds = (Round.query
@@ -163,6 +164,10 @@ def calculate_event_scores(event_id):
                     .filter_by(event_id=event_id)
                     .all())
     
+    # Find the minimum handicap index for the event
+    min_index = min([hcp.player_hcp for hcp in hcp_indexes])
+
+
     # Get all the scores in all the matches in the event's rounds
     scores = (Scores.query
                 .filter(Scores.match_id.in_([match.id for match in matches]))
@@ -189,7 +194,12 @@ def calculate_event_scores(event_id):
             for player in players:
                 player_index = next((hcp.player_hcp for hcp in hcp_indexes if hcp.player_id == player["player_id"]), None)
                 if player_index:
-                    player["playing_hcp"] = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par)
+                    if play_off_min:
+                        low_CH = playing_hcp(min_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par)
+                        player_CH = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par)
+                        player["playing_hcp"] = player_CH - low_CH if player_CH > low_CH else player_CH
+                    else:
+                        player["playing_hcp"] = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par)
                 else:
                     player["playing_hcp"] = None
             

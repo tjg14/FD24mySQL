@@ -508,6 +508,9 @@ def create_event_continued():
     if not event_name or not event_date:
         return apology("Both event name and event date must be provided.")
     
+    play_off_min = request.form.get("play_off_min")
+    play_off_min = True if play_off_min == "on" else False
+    
     num_teams = int(request.form.get("num_teams"))
     if num_teams < 2:
         return apology("At least 2 teams must be provided.")
@@ -544,7 +547,8 @@ def create_event_continued():
     # Insert into events table the event name, group id, and date
     new_event = Event(event_name=event_name, 
                   group_id=session["group_id"], 
-                  date=event_date)
+                  date=event_date,
+                  play_off_min=play_off_min)
     db.session.add(new_event)
     db.session.commit()
 
@@ -1837,6 +1841,7 @@ def event_settings():
         if not event:
             return apology("Event not found")
         event_name = event.event_name
+        play_off_min = event.play_off_min
         # Get all teams and players for the event
         teams = (Team.query
                 .filter_by(event_id=session["event_id"])
@@ -1876,10 +1881,12 @@ def event_settings():
 
 
         return render_template("event_settings.html", 
-                               event_name=event_name, 
+                               event_name=event_name,
+                               event_id=session["event_id"], 
                                num_teams=num_teams, 
                                teams_data=teams_data,
-                               group_players=group_players
+                               group_players=group_players,
+                               play_off_min=play_off_min
                                )
     
 
@@ -2031,3 +2038,43 @@ def get_bet_amt(match_id):
         if not match:
             return jsonify(error="Match not found")
         return jsonify(bet_amt=match.bet_amt)
+
+
+@app.route('/update_play_off_min', methods=['POST'])
+def play_off_low():
+    data = request.get_json()
+    event_id = data['event_id']
+    play_off_min = data['play_off_min']
+    if not event_id:
+        return jsonify(error="Event id not sent in POST request")
+    if not play_off_low:
+        return jsonify(error="Play off low not sent in POST request")
+    
+    
+    event = Event.query.get(event_id)
+
+    # Get all matches in the event
+    rounds = (Round.query
+                .options(joinedload(Round.matches))
+                .filter_by(event_id=event_id)
+                .all())
+    
+    # For each match in each round, check if sum of f9, b9, 18 bets is > 3 
+    for round in rounds:
+        for match in round.matches:
+            bets = (Bets.query
+                    .filter_by(match_id=match.id)
+                    .all()
+                    )
+            for bet in bets:
+                if ((bet.match_hole_number != 1 and bet.front_9_bets is not None and bet.front_9_bets > 0) or
+                     (bet.match_hole_number != 10 and bet.back_9_bets is not None and bet.back_9_bets > 0) or
+                     (bet.match_hole_number != 1 and bet.total_18_bets is not None and bet.total_18_bets > 0)):
+                    return jsonify(error="Cannot change since bets have been placed on match")
+
+
+    event.play_off_min = play_off_min
+    db.session.commit()
+
+   
+    return jsonify(success="Play off low updated")
