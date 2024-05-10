@@ -1,6 +1,5 @@
 To do 
 
--can turn on/off play_on_low & added to leaderboard, need to fix bets & other routes
 -go through routes for race conditions
 -fix nones on course handicaps
 -scroll scorecard

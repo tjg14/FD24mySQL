@@ -263,11 +263,15 @@ def group_login():
                                  .all()
                                  )
             if not len(rows_associations):
-                new_association = GroupUserAssociation(
-                    group_id=session["group_id"], 
-                    user_id=session["user_id"])
-                db.session.add(new_association)
-                db.session.commit()
+                try:
+                    new_association = GroupUserAssociation(
+                        group_id=session["group_id"], 
+                        user_id=session["user_id"])
+                    db.session.add(new_association)
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    print("Failed to add new association. Error: ", str(e))
         elif request.form.get("is_associated") == "yes":
             group_id = request.form.get("group_id")
             # Confirm user is associated with group
@@ -614,24 +618,32 @@ def event_structure():
             })
         
         # Insert new round details into rounds table
-        new_round = Round(round_number=round_number, 
-                          round_name=new_round_name, 
-                          event_id=session["event_id"])
-        db.session.add(new_round)
-        db.session.commit()
+        try:
+            new_round = Round(round_number=round_number, 
+                            round_name=new_round_name, 
+                            event_id=session["event_id"])
+            db.session.add(new_round)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return apology("Round number already exists")
         
         round_id = new_round.id
         
         # Insert matches into matches table
-        for match in matches:
-            new_match = Match(match_number=match["match_number"], 
-                              match_starting_hole=1,
-                              round_id=round_id, 
-                              course_id=course_id_selected, 
-                              team_a_id=match["team_a"], 
-                              team_b_id=match["team_b"])
-            db.session.add(new_match)
-        db.session.commit()
+        try:
+            for match in matches:
+                new_match = Match(match_number=match["match_number"], 
+                                match_starting_hole=1,
+                                round_id=round_id, 
+                                course_id=course_id_selected, 
+                                team_a_id=match["team_a"], 
+                                team_b_id=match["team_b"])
+                db.session.add(new_match)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            return apology("Match number already exists")
         
         return redirect("/event_structure")
     else:
