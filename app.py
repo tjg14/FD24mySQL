@@ -693,7 +693,6 @@ def event_structure():
 def event_scoreboard():
     """Event Scoreboard"""
   
-
     event_data = calculate_event_scores(session["event_id"])
 
     if event_data.get("error"):
@@ -708,121 +707,7 @@ def event_scoreboard():
                            teams=event_data["teams"],
                            cumulative_totals=event_data["cumulative_totals"]
     )
-    
-    # # Get event name
-    # event = Event.query.get(session["event_id"])
-    # if not event:
-    #     return apology("Event not found")
-    # event_name = event.event_name
-    # event_status = event.status
 
-    # # Get all rounds for the event
-    # rounds = (Round.query
-    #           .filter_by(event_id=session["event_id"])
-    #           .order_by(Round.round_number)
-    #           .all())
-    # if not rounds:
-    #     return apology("No Rounds Found")
-    
-    # # Get all teams and players for the event
-    # teams = (Team.query
-    #          .filter_by(event_id=session["event_id"])
-    #          .options(joinedload(Team.players))
-    #          .all())
-    
-    # # Get all matches for the rounds in the event
-    # matches = (Match.query
-    #            .filter(Match.round_id.in_([round.id for round in rounds]))
-    #            .all())
-
-    # # Get all courses played in all the matches in the event's rounds
-    # courses = (CourseTee.query
-    #             .filter(CourseTee.id.in_([match.course_id for match in matches]))
-    #             .all())
-    
-    # # Get all the handicaps for players in the event
-    # hcp_indexes = (Handicap.query
-    #                 .filter_by(event_id=session["event_id"])
-    #                 .all())
-    
-    # # Get all the scores in all the matches in the event's rounds
-    # scores = (Scores.query
-    #             .filter(Scores.match_id.in_([match.id for match in matches]))
-    #             .all())
-
-    # # Initialize an empty list to store round data
-    # rounds_data = []
-    # cumulative_totals = {}
-
-    # # For each round in rounds
-    # for round in rounds:
-    #     # Initialize an empty dictionary to store team data
-    #     team_data = {}
-    #     # For each team in teams
-    #     for team in teams:
-    #         # Initialize total net score for team
-    #         team_total_net_score = 0
-    #         # Find the match in matches object that corresponds to the team and round
-    #         match = next((match for match in matches if match.round_id == round.id and (match.team_a_id == team.id or match.team_b_id == team.id)), None)
-    #         # Find what course the team played during this round
-    #         course_for_match = next((course for course in courses if course.id == match.course_id), None)
-    #         # Create a list of dictionaries for each player in the team, and add the player's playing handicap
-    #         players = [{"player_id": player.id, "player_name": player.player_name} for player in team.players]
-    #         for player in players:
-    #             player_index = next((hcp.player_hcp for hcp in hcp_indexes if hcp.player_id == player["player_id"]), None)
-    #             if player_index:
-    #                 course_hcp = player_index * float(course_for_match.slope) / 113 + (course_for_match.rating - course_for_match.total_18_par)
-    #                 player["playing_hcp"] = int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))
-    #             else:
-    #                 player["playing_hcp"] = None
-            
-    #         # For each hole in holes
-    #         for hole in course_for_match.holes:
-    #             # Get hole hcp
-    #             hole_hcp = hole.hole_hcp
-    #             net_scores_on_hole = []
-    #             for player in players:
-    #                 # Get player hcp
-    #                 player_hcp = player["playing_hcp"]
-    #                 # Calculate player strokes
-    #                 player_strokes = 1 if hole_hcp <= player_hcp else 0
-    #                 # Get player net score (needs match id, hole number, player id)
-    #                 score = next((score for score in scores if score.match_id == match.id and score.match_hole_number == hole.hole_number and score.player_id == player["player_id"]), None)
-    #                 if score:
-    #                     player_net = score.score - player_strokes - hole.par
-    #                 else:
-    #                     player_net = None
-    #                 # Add to net scores on hole list
-    #                 net_scores_on_hole.append(player_net)
-    #             # Add lowest of two net scores to team total net score
-    #             # Filter out None values from net_scores_on_hole
-    #             filtered_scores = [score for score in net_scores_on_hole if score is not None]
-    #             if filtered_scores:
-    #                 team_total_net_score += min(filtered_scores)
-                    
-    #         # Store the total net score for the team in team_data
-    #         team_data[team.team_name] = team_total_net_score
-    #         # Update the cumulative total for the team
-    #         if team.team_name in cumulative_totals:
-    #             cumulative_totals[team.team_name] += team_total_net_score
-    #         else:
-    #             cumulative_totals[team.team_name] = team_total_net_score
-
-    #     # Store the round number and team data in rounds_data
-    #     rounds_data.append({
-    #         "round_number": round.round_number,
-    #         "team_data": team_data
-    #     })
-
-    
-    # return render_template("leaderboard.html",
-    #                        event_name=event_name,
-    #                        event_id = session["event_id"],
-    #                        event_status=event_status,
-    #                        rounds_data=rounds_data,
-    #                        teams=teams,
-    #                        cumulative_totals=cumulative_totals
-    #)
 
 @app.route("/courseadmin", methods=["GET", "POST"])
 @login_required
@@ -982,6 +867,7 @@ def scorecard():
     if not event:
         return apology("Event not found")
     event_name = event.event_name
+    play_off_min = event.play_off_min
     
     course = CourseTee.query.get(match.course_id)
     if not course:
@@ -1012,6 +898,16 @@ def scorecard():
     # Create a dictionary to easily look up scores
     scores_dict = {(s.player_id, s.match_hole_number): s for s in scores}
 
+
+    # Get all the handicaps for players in the event and get the minimum handicap index
+    hcp_indexes_all = (Handicap.query
+                    .filter_by(event_id=event.id)
+                    .all())
+    
+    min_index = min([hcp.player_hcp for hcp in hcp_indexes_all])
+    low_CH = playing_hcp(min_index, course.slope, course.rating, course.total_18_par)
+    
+    
     # Add handicap for each player on team a and team b
     for player in team_data["team_a_players"] + team_data["team_b_players"]:
         hcp_index = (Handicap.query
@@ -1021,7 +917,15 @@ def scorecard():
                     )
         if not hcp_index:
             return apology("Missing handicap index")
-        player["hcp"] = playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par)
+        
+        player_CH = playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par)
+        if play_off_min:
+            if player_CH > low_CH:
+                player["hcp"] = player_CH - low_CH
+            else:
+                player["hcp"] = player_CH
+        else:
+            player["hcp"] = player_CH
         player["front_9_total"] = 0
         player["back_9_total"] = 0
         player["total_18"] = 0
@@ -1249,6 +1153,7 @@ def bets_input():
     return render_template("bets_input.html", 
                            rounds=rounds_data,
                            event_name=event.event_name,
+                           play_off_min=event.play_off_min,
                            format_positive=format_positive,
                            )
 
@@ -1289,6 +1194,15 @@ def get_match_data(match_id):
             .filter_by(id=match_id)
             .first()
             )
+
+    event = Event.query.get(session["event_id"])
+    play_off_min = event.play_off_min
+     # Get all the handicaps for players in the event
+    hcp_indexes = (Handicap.query
+                    .filter_by(event_id=event.id)
+                    .all())
+    min_index = min([hcp.player_hcp for hcp in hcp_indexes])
+    low_CH = playing_hcp(min_index, match.course_tee.slope, match.course_tee.rating, match.course_tee.total_18_par)
 
     scores = (Scores.query
                 .filter_by(match_id=match_id)
@@ -1338,7 +1252,14 @@ def get_match_data(match_id):
             for player in team["players"]:
                 player_index = player["handicap_index"]
                 if player_index:
-                    player["playing_hcp"] = playing_hcp(player_index, course.slope, course.rating, course.total_18_par)
+                    player_CH = playing_hcp(player_index, course.slope, course.rating, course.total_18_par)
+                    if play_off_min:
+                        if player_CH > low_CH:
+                            player["playing_hcp"] = player_CH - low_CH
+                        else:
+                            player["playing_hcp"] = player_CH
+                    else:
+                        player["playing_hcp"] = player_CH
                 else:
                     player["playing_hcp"] = None
 
@@ -1559,6 +1480,15 @@ def get_bet_results_data(match_id):
             .filter_by(id=match_id)
             .first()
             )
+    
+    event = Event.query.get(session["event_id"])
+    play_off_min = event.play_off_min
+     # Get all the handicaps for players in the event
+    hcp_indexes = (Handicap.query
+                    .filter_by(event_id=event.id)
+                    .all())
+    min_index = min([hcp.player_hcp for hcp in hcp_indexes])
+    low_CH = playing_hcp(min_index, match.course_tee.slope, match.course_tee.rating, match.course_tee.total_18_par)
 
     scores = (Scores.query
                 .filter_by(match_id=match_id)
@@ -1603,15 +1533,22 @@ def get_bet_results_data(match_id):
     }
 
     course = match.course_tee
-    
-    for team in [team_a, team_b]:
-            for player in team["players"]:
-                player_index = player["handicap_index"]
-                if player_index:
-                    player["playing_hcp"] = playing_hcp(player_index, course.slope, course.rating, course.total_18_par)
-                else:
-                    player["playing_hcp"] = None
 
+    for team in [team_a, team_b]:
+                for player in team["players"]:
+                    player_index = player["handicap_index"]
+                    if player_index:
+                        player_CH = playing_hcp(player_index, course.slope, course.rating, course.total_18_par)
+                        if play_off_min:
+                            if player_CH > low_CH:
+                                player["playing_hcp"] = player_CH - low_CH
+                            else:
+                                player["playing_hcp"] = player_CH
+                        else:
+                            player["playing_hcp"] = player_CH
+                    else:
+                        player["playing_hcp"] = None
+    
     # Get holes from course_tee
     holes = (Hole.query
              .filter_by(course_id=course.id)

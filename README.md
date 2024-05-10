@@ -4,7 +4,6 @@ To do
 -go through routes for race conditions
 -fix nones on course handicaps
 -scroll scorecard
--allow play off low handicap to event settings page
 - 85% as option not hardcode
 -block activity if complete
 -edit /delete round
