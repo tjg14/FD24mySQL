@@ -1485,7 +1485,8 @@ def betting_results():
 
     return render_template("bets_results.html", 
                            rounds=rounds_data,
-                           event_name=event.event_name
+                           event_name=event.event_name,
+                           event_status=event.status,
                            )
 
 @app.route('/api/bet_results_data/<int:match_id>')

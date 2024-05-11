@@ -7,6 +7,7 @@
 {% block main %}
     
     <p><b>Event Name: </b>{{ event_name }}</p>
+    <input type="hidden" id="event_status" value="{{ event_status }}"> 
 
     <div class="mb-3">
         <b>Round: </b>
@@ -33,6 +34,9 @@
     <div class="mb-b">
         <input class="form-control mx-auto w-auto" type="number" id="bet-amount" placeholder="$ per bet" style="display: none;">
     </div>
+    {% if event_status == 'COMPLETE' %}
+    <p id="event-status-notify" style="display: none;"><i>Note: To edit, set event to Incomplete </i></p>
+    {% endif %}
     <br>
     <div class="mb-3">
         <button class="btn btn-success" id="calculate-payout" style="display: none;">Calculate Payout</button>
@@ -108,9 +112,14 @@
             betAmount_input.value = '';
             betAmount_input.style.display = 'inline';
             payoutResult_pTag.innerHTML = '';
-            calculatePayoutButton.style.display = 'inline';
             perBetText_pTag.style.display = 'inline';
             teamNamePayout_pTag.innerHTML = '';
+            let event_status = document.getElementById('event_status').value;
+            if (event_status === 'INCOMPLETE') {
+                calculatePayoutButton.style.display = 'inline';
+            } else {
+                document.getElementById('event-status-notify').style.display = 'inline';
+            }
             
             const table = document.createElement('table');
             const thead = document.createElement('thead');
