@@ -10,6 +10,9 @@
         <p><b>Event Name:</b> {{ event_name }}</p>
     </div>
 
+    {% if rounds_data == [] %}
+        <p><i>No rounds have been created yet</i></p>
+    {% else %}
     <table class="table table-hover table-striped">
         <thead >
             <tr>
@@ -32,12 +35,17 @@
             {% endfor %}
         </tbody>
     </table>
+    {% endif %}
+
+
     <br>
     <div class="mb-3">
         <form action="/event_structure" method="get">
             <button type="submit" class="btn btn-success">Rounds, Matches, and Scorecards</button>
         </form>
     </div>
+    
+    {% if rounds_data != [] %}
     <p>Mark as complete</p>
     Incomplete
     <label class="switch">
@@ -45,6 +53,7 @@
         <span class="slider round"></span>
     </label>
     Complete
+    {% endif %}
 
     <script>
         document.getElementById('completion-toggle').addEventListener('change', function() {

@@ -15,7 +15,7 @@
             <tr>
                 <th>Players (index)</th>
                 {% for course in handicap_data %}
-                    <th>{{ course.course_name }}</th>
+                    <th>{{ course.course_name if course.course_name is not none else '' }}</th>
                 {% endfor %}
                     <th id="select_other_course_header">
                         
@@ -30,7 +30,10 @@
                 <tr>
                     <td>{{ player.player_name }} ({{ handicap_data[0].players_data.get(player.id).get('player_hcp')}})</td>
                     {% for course in handicap_data %}
-                        <td>{{ course.players_data.get(player.id, {}).get('course_hcp', '-') }}</td>
+                        <td>
+                            {% set course_hcp = course.players_data.get(player.id, {}).get('course_hcp', '-') %}
+                            {{ course_hcp if course_hcp is not none else '' }}
+                        </td>
                     {% endfor %}
                     <td id="player_hcp_other_course_{{loop.index0}}"></td>
                 </tr>

@@ -1,11 +1,11 @@
 To do 
-
+-email? ask user to input group p/w and it sends in email to users (helps keep record) - check password in route, 
 -go through routes for race conditions
--fix nones on course handicaps
+-change or get forgotten password
+-change website domain
 -scroll scorecard
 - 85% as option not hardcode
--block activity if complete
--edit /delete round
+
 -add more courses
 -css scorecard scroll
 

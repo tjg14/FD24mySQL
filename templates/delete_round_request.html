@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Delete Round
+{% endblock %}
+
+{% block main %}
+    
+
+    <div>
+        <h2>Delete Round</h2>
+        <p>Event Name: {{ event_name }}</p>
+        <p>Round Number: {{ round_number }}</p>
+        <p><i>Are you sure you want to delete this round, including all matches, scores, and bets?</i></p>
+        <form action="/delete_round_complete" method="post">
+            <input name="event_id" type="hidden" value="{{ event_id }}">
+            <input name="round_number" type="hidden" value="{{ round_number }}">
+            <button class="btn btn-danger" type="submit">Delete Round</button>
+        </form>
+    </div>
+    <p></p>
+    <div>
+        <form action="/event_structure">
+            <button class="btn btn-success" type="submit">Return to Rounds</button>
+        </form>
+    </div>
+
+{% endblock %}

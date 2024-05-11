@@ -2,10 +2,12 @@ import os, math
 
 from cs50 import SQL
 from flask_sqlalchemy import SQLAlchemy
+
 from sqlalchemy import func, desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from flask import Flask, jsonify, flash, redirect, render_template, request, session
+from flask_mail import Mail, Message
 import json
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -37,7 +39,19 @@ app.config["SQLALCHEMY_POOL_RECYCLE"] = 299
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USERNAME'] = 'tgrigg2010@gmail.com'
+app.config['MAIL_PASSWORD'] = 'nhsgolfer'
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
 
+mail = Mail(app)
+
+# Ensure templates are auto-reloaded
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+# Ensure responses aren't cached
 @app.after_request
 def after_request(response):
     """Ensure responses aren't cached"""
@@ -1031,6 +1045,11 @@ def scorecard_edit():
  
     if request.method == "POST":
 
+        event = Event.query.get(session["event_id"])
+        event_status = event.status
+        if event_status == "COMPLETE":
+            return apology("Event is complete. Go to scoreboard to edit.")
+        
         match_id = request.form.get("match_id")
         player_id = request.form.get("player_id")
         if not match_id or not player_id:
@@ -2027,3 +2046,69 @@ def play_off_low():
 
    
     return jsonify(success="Play off low updated")
+
+
+@app.route("/delete_round_request", methods=["POST"])
+@login_required
+@group_login_required
+@event_selected
+def delete_round_check():
+
+    event_id = session["event_id"]
+    event = Event.query.get(event_id)
+    event_status = event.status
+    if event_status == "COMPLETE":
+        return apology("Event is complete. Go to scoreboard to edit.")
+    round_number = request.form.get("round_number")
+
+    return render_template("delete_round_request.html", 
+                           event_id=event_id,
+                           event_name=event.event_name, 
+                           round_number=round_number)
+
+
+@app.route("/delete_round_complete", methods=["POST"])
+@login_required
+@group_login_required
+@event_selected
+def delete_round_complete():
+    event_id = request.form.get("event_id")
+    round_number = request.form.get("round_number")
+    # Get the round id, then delete the round, matches, scores, and bets in all matches in the round
+    round = (Round.query
+            .filter_by(event_id=event_id, round_number=round_number)
+            .first()
+            )
+    if not round:
+        return apology("Round not found")
+    round_id = round.id
+    # Get all matches in the round
+    try:
+        matches = (Match.query
+                .filter_by(round_id=round_id)
+                .all()
+                )
+        for match in matches:
+            # Delete scores
+            scores = (Scores.query
+                    .filter_by(match_id=match.id)
+                    .all()
+                    )
+            for score in scores:
+                db.session.delete(score)
+            # Delete bets
+            bets = (Bets.query
+                    .filter_by(match_id=match.id)
+                    .all()
+                    )
+            for bet in bets:
+                db.session.delete(bet)
+            db.session.delete(match)
+        db.session.delete(round)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return apology(f"Error deleting round: {e}")
+    
+    return redirect("/event_structure")
+

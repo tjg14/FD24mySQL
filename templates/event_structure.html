@@ -30,8 +30,12 @@
                         <tr class="round-header">
                             <td class="round-header-text" colspan="2">RD{{ round.round_number }} {{ round.round_name}}</td>
                             <td class="round-header-text">
-                                <span>Edit</span>
-                                <span>Delete</span>
+                                {% if rounds|length == round.round_number %}
+                                    <form action="/delete_round_request" method="post">
+                                        <input type="hidden" name="round_number" value="{{ round.round_number }}">
+                                        <button type="submit" class="btn btn-link" style="color: rgb(247, 196, 196); text-decoration: underline;">Delete Round</button>
+                                    </form>
+                                {% endif %}
                             </td>
                         </tr>
                         
