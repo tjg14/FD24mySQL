@@ -7,7 +7,6 @@ from sqlalchemy import func, desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from flask import Flask, jsonify, flash, redirect, render_template, request, session
-from flask_mail import Mail, Message
 import json
 from flask_session import Session
 from werkzeug.security import check_password_hash, generate_password_hash
