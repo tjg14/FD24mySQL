@@ -66,19 +66,29 @@ td span {
     margin-right: 5px;
 }
 
-#scorecard_table {
+/* #scorecard_table {
     border-spacing: 0;
-}
+} */
+
 #scorecard_header {
 
     font-size: small;
-    border: 1px solid #bbbbbb;
+    /* border: 1px solid #bbbbbb; */
 }
 
 #scorecard_body {
 
     font-size: smaller;
-    border: 1px solid #bbbbbb;
+    /* border: 1px solid #bbbbbb; */
+}
+
+#scorecard-table-div .table {
+    border-collapse: collapse;
+}
+
+#scorecard-table-div .table th, 
+#scorecard-table-div .table td {
+    border: 1px solid lightgrey;
 }
 
 .scorecard_cell {
@@ -92,15 +102,30 @@ input[type="number"].scorecard_cell::-webkit-outer-spin-button {
      margin: 0;
 }
 
+
 #scrollable-table-scorecard {
-    width: calc(100vw - 5px);
-    margin-left: auto;
-    margin-right: auto;
-    overflow: scroll;
+    width: 95%;
+    overflow-x: auto;
 }
+
 
 #scrollable-table-scorecard .table thead th:first-child,
 #scrollable-table-scorecard .table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: white;
+    z-index: 1;
+}
+
+#scorecard-table-div {
+    width: 98%;
+    overflow-x: auto;
+}
+
+
+#scorecard-table-div .table thead th:first-child,
+#scorecard-table-div .table thead #sticky-pound,
+#scorecard-table-div .table tbody td:first-child {
     position: sticky;
     left: 0;
     background-color: white;

@@ -1,13 +1,13 @@
 To do 
--email? ask user to input group p/w and it sends in email to users (helps keep record) - check password in route, 
+-linear on scorecard, bets input, bets results, back to rounds
+
+-plum login - golfisfun2
 -go through routes for race conditions
 -change or get forgotten password
 -change website domain
--scroll scorecard
+
 - 85% as option not hardcode
 
--add more courses
--css scorecard scroll
 
 -change passoword
 -recover password?

@@ -74,7 +74,7 @@ def format_positive(number):
     
 def format_none(number):
     """Format dash if the number is None."""
-    if number is None:
+    if number is None or number == 0:
         return "-"
     else:
         return number

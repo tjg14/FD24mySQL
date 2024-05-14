@@ -7,6 +7,7 @@
 {% block main %}
     
     <p><b>Event Name: </b>{{ event_name }}</p>
+    <input type="hidden" id="event_status" value="{{ event_status}}">
 
     <b>Round: </b>
     <select name="round_select" id="round_select">
@@ -31,6 +32,7 @@
     <script>
         const roundSelect = document.getElementById('round_select');
         const matchSelect = document.getElementById('match-select');
+        const eventStatus = document.getElementById('event_status').value;
         let data;
 
         roundSelect.addEventListener('change', async () => {
@@ -74,7 +76,15 @@
             const dataDisplay = document.getElementById('bets-data-display');
             dataDisplay.innerHTML = '';
 
-            document.getElementById('submit-bets').style.display = 'inline';
+            if (eventStatus == 'COMPLETE') {
+                const message = document.createElement('p');
+                message.textContent = 'To update bets, set event to incomplete.';
+                message.style.fontStyle = 'italic';
+                dataDisplay.appendChild(message);
+            } else if (eventStatus == 'INCOMPLETE') {
+                document.getElementById('submit-bets').style.display = 'inline';
+            }
+            
             
             const table = document.createElement('table');
             const thead = document.createElement('thead');
@@ -87,7 +97,7 @@
             const headerRow = document.createElement('tr');
 
             const headerBets = document.createElement('th');
-            headerBets.textContent = 'Bets';
+            headerBets.textContent = 'Bets on Tee';
             headerRow.appendChild(headerBets);
             
             const headerHole = document.createElement('th');
@@ -125,15 +135,15 @@
                 
                 // Display team a score, team b score and match score in remaining 3 columns
                 const teamAScore = document.createElement('td');
-                teamAScore.textContent = match_api_data[i]["team_a_net_cumulative"];
+                teamAScore.textContent = match_api_data[i].team_a_net_cumulative === 0 ? 'E' : match_api_data[i].team_a_net_cumulative;
                 holeRow.appendChild(teamAScore);
 
                 const teamBScore = document.createElement('td');
-                teamBScore.textContent = match_api_data[i].team_b_net_cumulative;
+                teamBScore.textContent = match_api_data[i].team_b_net_cumulative === 0 ? 'E' : match_api_data[i].team_b_net_cumulative;
                 holeRow.appendChild(teamBScore);
 
                 const matchScore = document.createElement('td');
-                matchScore.textContent = match_api_data[i].match_net;
+                matchScore.textContent = match_api_data[i].match_net === 0 ? 'E' : match_api_data[i].match_net;
                 holeRow.appendChild(matchScore);
 
                 tbody.appendChild(holeRow);

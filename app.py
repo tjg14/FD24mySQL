@@ -1174,6 +1174,7 @@ def bets_input():
     return render_template("bets_input.html", 
                            rounds=rounds_data,
                            event_name=event.event_name,
+                           event_status=event.status,
                            play_off_min=event.play_off_min,
                            format_positive=format_positive,
                            )
