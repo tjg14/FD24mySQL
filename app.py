@@ -1157,16 +1157,11 @@ def scorecard_processing():
 def bets():
     return render_template("bets.html")
 
-@app.route('/bets_input', methods=['GET'])
+@app.route('/bets_input', methods=['GET', 'POST'])
 @login_required
 @group_login_required
 @event_selected
 def bets_input():
-    
-    if request.method == "POST":
-        match_id = request.form.get("match_id")
-        match = Match.query.get(match_id)
-        round_id = match.round_id
     
     # Send to template the rounds in the event (id, and number: name)
     event = Event.query.get(session["event_id"])
@@ -1180,15 +1175,36 @@ def bets_input():
                     "round_name": "R" + str(round.round_number) + " " + round.round_name} 
                     for round in rounds]
 
-    return render_template("bets_input.html", 
+    if request.method == "GET":
+        return render_template("bets_input.html", 
                            rounds=rounds_data,
                            event_name=event.event_name,
                            event_status=event.status,
                            play_off_min=event.play_off_min,
                            format_positive=format_positive,
-                           match_id_sent=match_id,
-                           round_id_sent=round_id
                            )
+    
+    if request.method == "POST":
+        match_id = request.form.get("match_id")
+        match = Match.query.get(match_id)
+        team_a_sent = Team.query.get(match.team_a_id).team_name
+        team_b_sent = Team.query.get(match.team_b_id).team_name
+        # Get round in rounds_data that matches round_id   
+        round_id = match.round_id
+        round_sent = next((r for r in rounds_data if r["id"] == round_id), None)
+
+        return render_template("bets_input.html", 
+                                rounds=rounds_data,
+                                event_name=event.event_name,
+                                event_status=event.status,
+                                play_off_min=event.play_off_min,
+                                format_positive=format_positive,
+                                match_id_sent=match_id,
+                                round_id_sent=round_id,
+                                round_sent = round_sent,
+                                team_a_sent = team_a_sent,
+                                team_b_sent = team_b_sent
+                                )
 
 
 

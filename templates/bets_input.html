@@ -8,19 +8,29 @@
     
     <p><b>Event Name: </b>{{ event_name }}</p>
     <input type="hidden" id="event_status" value="{{ event_status}}">
+    <input type="hidden" id="match_id_sent" value="{{ match_id_sent }}">
+    <input type="hidden" id="round_id_sent" value="{{ round_id_sent }}">
 
     <b>Round: </b>
-    <select name="round_select" id="round_select">
-        <option value="" disabled selected>Select a round</option>
-        {% for round in rounds %}
-            <option value="{{ round.id }}">{{ round.round_name }}</option>
-        {% endfor %}
-    </select>
+    {% if not round_id_sent %}
+        <select name="round_select" id="round_select">
+            <option value="" disabled selected>Select a round</option>
+            {% for round in rounds %}
+                <option value="{{ round.id }}">{{ round.round_name }}</option>
+            {% endfor %}
+        </select>
+    {% else %}
+        {{ round_sent.round_name }}
+    {% endif %}
     <p></p>
     <b>Match: </b>
-    <select id="match-select">
-        <!-- Options populated with JavaScript -->
-    </select>
+    {% if team_a_sent %} 
+        {{team_a_sent}} vs. {{team_b_sent}} 
+    {% else %}
+        <select id="match-select">
+            <!-- Options populated with JavaScript -->
+        </select>
+    {% endif %}
 
     <div class="mx-auto" id="bets-data-display">
         <!-- Data table populated with JavaScript -->
@@ -33,43 +43,58 @@
         const roundSelect = document.getElementById('round_select');
         const matchSelect = document.getElementById('match-select');
         const eventStatus = document.getElementById('event_status').value;
+        const match_id_sent = document.getElementById('match_id_sent').value;
+        const round_id_sent = document.getElementById('round_id_sent').value;
         let data;
+        let round_id;
 
-        roundSelect.addEventListener('change', async () => {
-            const round_id = roundSelect.value;
-            const response = await fetch(`/api/matches/${round_id}`);
-            data = await response.json();
+        if (round_id_sent) {
+            roundS_id = round_id_sent;
+        } else {
+            roundSelect.addEventListener('change', async () => {
+                
+                round_id = roundSelect.value;
+                const response = await fetch(`/api/matches/${round_id}`);
+                data = await response.json();
 
-            matchSelect.innerHTML = '';
-            //Add a default option non selectable
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Select a match';
-            defaultOption.disabled = true;
-            defaultOption.selected = true;
-            matchSelect.appendChild(defaultOption);
+                matchSelect.innerHTML = '';
+                //Add a default option non selectable
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select a match';
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                matchSelect.appendChild(defaultOption);
 
-            //Add an option for each match
-            for (const match of data.matches) {
-                const option = document.createElement('option');
-                option.value = match.id;
-                option.textContent = match.matchup;
-                matchSelect.appendChild(option);
-            }
+                //Add an option for each match
+                for (const match of data.matches) {
+                    const option = document.createElement('option');
+                    option.value = match.id;
+                    option.textContent = match.matchup;
+                    matchSelect.appendChild(option);
+                }
 
-            // Clear bets data display
-            const dataDisplay = document.getElementById('bets-data-display');
-            dataDisplay.innerHTML = '';
+                // Clear bets data display
+                const dataDisplay = document.getElementById('bets-data-display');
+                dataDisplay.innerHTML = '';
 
-        });
+                //Hide the submit bets button
+                document.getElementById('submit-bets').style.display = 'none';
+
+            });
+        };
 
         // Add an event listener to match select, to fetch data on the round 
         // for each hole, will return hole_number, team a score, team b score, and match score
         let match_api_data;
         let match_id;
-        matchSelect.addEventListener('change', async () => {
-
-            match_id = matchSelect.value;
+        
+        async function fetchDataAndUpdateDisplay() {
+            if (match_id_sent) {
+                match_id = match_id_sent;
+            } else {
+                match_id = matchSelect.value;
+            }
             const response = await fetch(`/api/match_data/${match_id}`);
             match_api_data = await response.json();
 
@@ -150,7 +175,13 @@
             };
             table.appendChild(tbody);
             dataDisplay.appendChild(table);
-        });
+
+        };
+        
+        if (!match_id_sent) {
+            matchSelect.addEventListener('change', fetchDataAndUpdateDisplay);
+        };
+
 
         function editBetsCell(i, betsCell) {
             betsCell.innerHTML = ''; // Clear the bets cell
@@ -350,6 +381,10 @@
             }
         });
 
+        // Call the function on page load if a match is already selected
+        if (match_id_sent) {
+            fetchDataAndUpdateDisplay();
+        }
 
     </script>
 {% endblock %}
