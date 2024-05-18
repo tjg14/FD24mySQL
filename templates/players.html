@@ -7,17 +7,23 @@
 {% block main %}
 
     <div class="mx-auto" id="player_table_top">
-        <h2>{{ groupname }} Group Players List ({{ num_players }})</h2>
+        <h2>{{ groupname }} Players List ({{ num_players }} player(s))</h2>
         <br>
         <table class="table table-hover table-striped" >
             <thead>
-                <tr class="table-primary">
+                <tr class="round-header">
                     <th>Player Name</th>
                     <th>Latest Handicap Saved</th>
                     <th></th>
                 </tr>
             </thead>
+            
             <tbody id="player_table">
+                {% if not players %}
+                <tr>
+                    <td colspan="3">Add players that typically play in this group</td>
+                </tr>
+            {% endif %}
                 {% for player in players %}
                 <tr>
                     <td>{{ player.player_name }}</td>
@@ -49,14 +55,17 @@
             </tbody>
         </table>
         
-    <div>
-        <button class="btn btn-primary" id = "add_player">Add Player</button>
+        <div>
+            <button class="btn btn-success" id = "add_player">Add Player</button>
+        </div>
+        <p></p>
+        {% if players %}
+            <div>
+                <i>Note: Latest handicap will be set via most recent dated event - otherwise will show No HCP.</i>
+            </div>
+        {% endif %}
     </div>
-    <p></p>
-    <div>
-        <i>Note: Latest handicap will be set via most recent dated event - otherwise will show No HCP.</i>
-    </div>
-    </div>
+
     <script>
         let playerTable = document.getElementById("player_table");
         let addPlayerButton = document.getElementById("add_player");

@@ -288,6 +288,10 @@ def group_login():
             # Add group id to session
             session["group_id"] = group_id
 
+        # See if any players in group
+        players = Player.query.filter_by(group_id=session["group_id"]).all()
+        if not len(players):
+            return redirect("/players")
         # Redirect to group homepage
         return redirect("/")
 
@@ -1159,6 +1163,11 @@ def bets():
 @event_selected
 def bets_input():
     
+    if request.method == "POST":
+        match_id = request.form.get("match_id")
+        match = Match.query.get(match_id)
+        round_id = match.round_id
+    
     # Send to template the rounds in the event (id, and number: name)
     event = Event.query.get(session["event_id"])
     if not event:
@@ -1177,6 +1186,8 @@ def bets_input():
                            event_status=event.status,
                            play_off_min=event.play_off_min,
                            format_positive=format_positive,
+                           match_id_sent=match_id,
+                           round_id_sent=round_id
                            )
 
 

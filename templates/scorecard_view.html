@@ -12,6 +12,14 @@
         <p><b>Round Number:</b> {{ round_number }}</p>
         <p><b>Match Number:</b> {{ match_data.match_number }}</p>
     </div>
+    {% if team_data.team_a_players[0].total_18 and team_data.team_b_players[0].total_18 %}
+        <div class="mb-3">
+            <form action="/bets_input" method="post">
+                <input type="hidden" name="match_id" value="{{ match_data.match_id }}">
+                <button class="btn btn-success" type="submit">Go to Bet Input</button>
+            </form>
+        </div>
+    {% endif %}
 
     <div id="scorecard-table-div">
         <table class="table table-hover table-striped" id="scorecard_table">

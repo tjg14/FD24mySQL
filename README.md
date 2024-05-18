@@ -1,5 +1,7 @@
 To do 
 -linear on scorecard, bets input, bets results, back to rounds
+-?? change bets reults to bets details page,, then add bets history, just one line each bet
+(or not)
 
 -plum login - golfisfun2
 -go through routes for race conditions
