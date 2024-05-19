@@ -27,6 +27,7 @@ app.config["DEBUG"]= True
 
 # Custom filter
 app.jinja_env.filters["usd"] = usd
+app.jinja_env.filters["format_positive"] = format_positive
 
 # Configure session to use filesystem (instead of signed cookies)
 app.config["SESSION_PERMANENT"] = False
@@ -1492,7 +1493,7 @@ def apology_route():
     return apology(message)
 
 
-@app.route('/bets_results', methods=['GET'])
+@app.route('/bets_results', methods=['GET', 'POST'])
 @login_required
 @group_login_required
 @event_selected
@@ -1510,12 +1511,33 @@ def betting_results():
     rounds_data = [{"id": round.id, 
                     "round_name": "R" + str(round.round_number) + " " + round.round_name} 
                     for round in rounds]
+    if request.method == "GET":
+        return render_template("bets_results.html", 
+                            rounds=rounds_data,
+                            event_name=event.event_name,
+                            event_status=event.status,
+                            )
 
-    return render_template("bets_results.html", 
-                           rounds=rounds_data,
-                           event_name=event.event_name,
-                           event_status=event.status,
-                           )
+    if request.method == "POST":
+        match_id = request.form.get("match_id")
+        match = Match.query.get(match_id)
+        team_a_sent = Team.query.get(match.team_a_id).team_name
+        team_b_sent = Team.query.get(match.team_b_id).team_name
+        # Get round in rounds_data that matches round_id   
+        round_id = match.round_id
+        round_sent = next((r for r in rounds_data if r["id"] == round_id), None)
+
+        return render_template("bets_results.html", 
+                                rounds=rounds_data,
+                                event_name=event.event_name,
+                                event_status=event.status,
+                                match_id_sent=match_id,
+                                round_id_sent=round_id,
+                                round_sent = round_sent,
+                                team_a_sent = team_a_sent,
+                                team_b_sent = team_b_sent
+                                )
+
 
 @app.route('/api/bet_results_data/<int:match_id>')
 def get_bet_results_data(match_id):

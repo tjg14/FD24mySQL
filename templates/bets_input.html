@@ -13,7 +13,7 @@
 
     <b>Round: </b>
     {% if not round_id_sent %}
-        <select name="round_select" id="round_select">
+        <select class="form-select mx-auto w-auto" name="round_select" id="round_select">
             <option value="" disabled selected>Select a round</option>
             {% for round in rounds %}
                 <option value="{{ round.id }}">{{ round.round_name }}</option>
@@ -27,7 +27,7 @@
     {% if team_a_sent %} 
         {{team_a_sent}} vs. {{team_b_sent}} 
     {% else %}
-        <select id="match-select">
+        <select class="form-select mx-auto w-auto" id="match-select">
             <!-- Options populated with JavaScript -->
         </select>
     {% endif %}
@@ -376,8 +376,19 @@
 
                 window.location.href = `/apology?message=${encodeURIComponent(result.message)}`;
             } else {
-                // Redirect to the bets page
-                window.location.href = '/bets';
+                // Create a form and submit it to make a POST request
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/bets_results';
+
+                const hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = 'match_id';
+                hiddenField.value = match_id;
+
+                form.appendChild(hiddenField);
+                document.body.appendChild(form);
+                form.submit();
             }
         });
 

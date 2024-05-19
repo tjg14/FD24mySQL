@@ -8,21 +8,32 @@
     
     <p><b>Event Name: </b>{{ event_name }}</p>
     <input type="hidden" id="event_status" value="{{ event_status }}"> 
+    <input type="hidden" id="match_id_sent" value="{{ match_id_sent }}">
+    <input type="hidden" id="round_id_sent" value="{{ round_id_sent }}">
+    <input type="hidden" id="team_a_sent" value="{{ team_a_sent }}">
 
     <div class="mb-3">
         <b>Round: </b>
-        <select class="form-select mx-auto w-auto" id="round_select">
-            <option value="" disabled selected>Select a round</option>
-            {% for round in rounds %}
-                <option value="{{ round.id }}">{{ round.round_name }}</option>
-            {% endfor %}
-        </select>
+        {% if not round_id_sent %}
+            <select class="form-select mx-auto w-auto" id="round_select">
+                <option value="" disabled selected>Select a round</option>
+                {% for round in rounds %}
+                    <option value="{{ round.id }}">{{ round.round_name }}</option>
+                {% endfor %}
+            </select>
+        {% else %}
+            {{ round_sent.round_name }}
+        {% endif %}
     </div>
     <div class="mb-3">
         <b>Match: </b>
-        <select class="form-select mx-auto w-auto" id="match-select">
-            <!-- Options populated with JavaScript -->
-        </select>
+        {% if team_a_sent %} 
+            {{team_a_sent}} vs. {{team_b_sent}} 
+        {% else %}
+            <select class="form-select mx-auto w-auto" id="match-select">
+                <!-- Options populated with JavaScript -->
+            </select>
+        {% endif %}
     </div>
     <div class="mx-auto" id="bets-data-display">
     <!-- Data populated with JavaScript -->
@@ -47,58 +58,78 @@
     <div class="mb-3">
         <p id="team_name_payout" style="display: none;"></p>
     </div>
+    <p></p>
+    <div class="mb-3">
+        <form action="/event_scoreboard" method="get">
+            <button class="btn btn-success" id="return-btn" style="display: none;">Return to Leaderboard</button>
+        </form> 
+    </div>
 
     <script>
         const roundSelect = document.getElementById('round_select');
         const matchSelect = document.getElementById('match-select');
+        const match_id_sent = document.getElementById('match_id_sent').value;
+        const round_id_sent = document.getElementById('round_id_sent').value;
+        const team_a_sent = document.getElementById('team_a_sent').value;
         const calculatePayoutButton = document.getElementById('calculate-payout');
+        const returnButton = document.getElementById('return-btn');
         const perBetText_pTag = document.getElementById('per_bet_text');
         let payoutResult_pTag = document.getElementById('payout-result')
         let teamNamePayout_pTag = document.getElementById('team_name_payout');
         let betAmount_input = document.getElementById('bet-amount');
         let data;
+        let round_id;
 
-        roundSelect.addEventListener('change', async () => {
-            const round_id = roundSelect.value;
-            const response = await fetch(`/api/matches/${round_id}`);
-            data = await response.json();
-            console.log(data);
+        if (round_id_sent) {
+            round_id = round_id_sent;
+        } else {
+            roundSelect.addEventListener('change', async () => {
+                round_id = roundSelect.value;
+                const response = await fetch(`/api/matches/${round_id}`);
+                data = await response.json();
+                console.log(data);
 
-            matchSelect.innerHTML = '';
-            //Add a default option non selectable
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Select a match';
-            defaultOption.disabled = true;
-            defaultOption.selected = true;
-            matchSelect.appendChild(defaultOption);
+                matchSelect.innerHTML = '';
+                //Add a default option non selectable
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select a match';
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                matchSelect.appendChild(defaultOption);
 
-            //Add an option for each match
-            for (const match of data.matches) {
-                const option = document.createElement('option');
-                option.value = match.id;
-                option.textContent = match.matchup;
-                matchSelect.appendChild(option);
-            }
+                //Add an option for each match
+                for (const match of data.matches) {
+                    const option = document.createElement('option');
+                    option.value = match.id;
+                    option.textContent = match.matchup;
+                    matchSelect.appendChild(option);
+                }
 
-            // Clear bets data display
-            const dataDisplay = document.getElementById('bets-data-display');
-            dataDisplay.innerHTML = '';
-            perBetText_pTag.style.display = 'none';
-            betAmount_input.style.display = 'none';
-            calculatePayoutButton.style.display = 'none';
-            payoutResult_pTag.style.display = 'none';
-            teamNamePayout_pTag.style.display = 'none';
+                // Clear bets data display
+                const dataDisplay = document.getElementById('bets-data-display');
+                dataDisplay.innerHTML = '';
+                perBetText_pTag.style.display = 'none';
+                betAmount_input.style.display = 'none';
+                calculatePayoutButton.style.display = 'none';
+                payoutResult_pTag.style.display = 'none';
+                teamNamePayout_pTag.style.display = 'none';
+                returnButton.style.display = 'none';
 
-        });
+            });
+        };
 
         // Add an event listener to match select, to fetch data on the round 
         // for each hole, will return hole_number, team a score, team b score, and match score
         let results_api_data;
         let match_id;
-        matchSelect.addEventListener('change', async () => {
 
-            match_id = matchSelect.value;
+        async function fetchDataAndUpdateBetsDisplay() {
+            if (match_id_sent) {
+                match_id = match_id_sent;
+            } else {
+                match_id = matchSelect.value;
+            }
             const response = await fetch(`/api/bet_results_data/${match_id}`);
             results_api_data = await response.json();
             console.log(results_api_data);
@@ -120,6 +151,7 @@
             } else {
                 document.getElementById('event-status-notify').style.display = 'inline';
             }
+            
             
             const table = document.createElement('table');
             const thead = document.createElement('thead');
@@ -286,9 +318,14 @@
                 payoutResult_pTag.style.color = payout < 0 ? 'red' : 'green';
 
                 teamNamePayout_pTag.style.display = 'inline';
-                var match_found = data.matches.find(dict => dict.id == match_id);
-                teamNamePayout_pTag.textContent = 'for team ' + match_found.team_a_name;
+                if (!team_a_sent) {
+                    var match_found = data.matches.find(dict => dict.id == match_id);
+                    teamNamePayout_pTag.textContent = 'for team ' + match_found.team_a_name;
+                } else {
+                    teamNamePayout_pTag.textContent = 'for team ' + team_a_sent;
+                }
                 teamNamePayout_pTag.style.fontStyle = 'italic';
+                returnButton.style.display = 'inline';
             }
 
             // Send request to /api/bet_amt to get bet_amt based on match _id
@@ -324,7 +361,15 @@
                 console.log(save_data);
             }
 
-        });
+        };
+
+        if (!match_id_sent) {
+            matchSelect.addEventListener('change', fetchDataAndUpdateBetsDisplay);
+        };
+
+        if (match_id_sent) {
+            fetchDataAndUpdateBetsDisplay();
+        }
 
         
     </script>

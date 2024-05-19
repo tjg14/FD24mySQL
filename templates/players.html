@@ -7,7 +7,7 @@
 {% block main %}
 
     <div class="mx-auto" id="player_table_top">
-        <h2>{{ groupname }} Players List ({{ num_players }} player(s))</h2>
+        <h2>{{ groupname }} Players List</h2>
         <br>
         <table class="table table-hover table-striped" >
             <thead>
@@ -97,7 +97,7 @@
             let newInput2 = document.createElement("button");
             newInput2.id = "submit_button";
             newInput2.classList.add("btn");
-            newInput2.classList.add("btn-primary");
+            newInput2.classList.add("btn-success");
             newInput2.textContent = "Submit";
             newCell2.appendChild(newInput2);
 

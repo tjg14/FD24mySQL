@@ -28,9 +28,9 @@
                 <tr>
                     <td>{{ team.team_name }}</td>
                     {% for round in rounds_data %}
-                        <td>{{ round.team_data.get(team.team_name, '-') }}</td>
+                        <td>{{ round.team_data.get(team.team_name, '-') | format_positive }}</td>
                     {% endfor %}
-                    <td>{{ cumulative_totals.get(team.team_name, '-') }}</td>
+                    <td>{{ cumulative_totals.get(team.team_name, '-') | format_positive }}</td>
                 </tr>
             {% endfor %}
         </tbody>
