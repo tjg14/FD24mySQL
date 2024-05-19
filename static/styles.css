@@ -7,8 +7,8 @@ body
 /* Size for page Name */
 nav .navbar-brand
 {
-    font-size: 2em;
-    font-family: Brush Script MT, Arial, Helvetica, sans-serif;
+    font-size: 1.75em;
+    font-family: 'Cabin Sketch', Arial, Helvetica, sans-serif;
 }
 
 /* Colors for Nav Bar */
@@ -245,6 +245,20 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+.form-control.mx-auto.w-auto:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 128, 0, 0.25);
+}
+
+.custom-checkbox {
+    transform: scale(1.5);
+}
+
+.custom-checkbox:checked {
+    appearance: none;
+    background-color: darkgreen;
+    border: 2px solid darkgreen;
 }
 
 
