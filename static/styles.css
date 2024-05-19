@@ -255,12 +255,6 @@ input:checked + .slider:before {
     transform: scale(1.5);
 }
 
-.custom-checkbox:checked {
-    appearance: none;
-    background-color: darkgreen;
-    border: 2px solid darkgreen;
-}
-
 
 @media (max-width: 700px) {
     td span {

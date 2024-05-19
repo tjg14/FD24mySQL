@@ -49,7 +49,7 @@
         let round_id;
 
         if (round_id_sent) {
-            roundS_id = round_id_sent;
+            round_id = round_id_sent;
         } else {
             roundSelect.addEventListener('change', async () => {
                 
@@ -250,6 +250,7 @@
             const betsCheckbox = document.createElement('input');
             betsCheckbox.type = 'checkbox';
             betsCheckbox.name = `${type}_${holeNumber}`;
+            betsCheckbox.classList.add('custom-checkbox');
 
             // Check the checkbox if there's a current bet for this hole
             if (match_api_data[holeNumber][type]["current_bets"] > 0) {
