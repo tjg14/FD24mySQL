@@ -76,7 +76,7 @@ def index():
        
 
         session["event_id"] = event_id
-        print("made it here")
+      
         return redirect("/event_scoreboard")
     else:
         # Remove any specific event in session
@@ -963,7 +963,7 @@ def scorecard():
     min_index = min([hcp.player_hcp for hcp in hcp_indexes_all])
     low_CH = playing_hcp(min_index, course.slope, course.rating, course.total_18_par, hcp_allowance)
     
-    print('lowCH', low_CH)
+  
     # Add handicap for each player on team a and team b
     for player in team_data["team_a_players"] + team_data["team_b_players"]:
         hcp_index = (Handicap.query
@@ -978,13 +978,11 @@ def scorecard():
         if play_off_min:
             if player_CH > low_CH:
                 player["hcp"] = min(player_CH - low_CH, max_strokes)
-                print(player["hcp"])
             else:
-                player["hcp"] = min(player_CH, max_strokes)
-                print(player["hcp"])
+                player["hcp"] = 0
         else:
             player["hcp"] = min(player_CH, max_strokes)
-            print(player["hcp"])
+           
         player["front_9_total"] = 0
         player["back_9_total"] = 0
         player["total_18"] = 0
@@ -1010,7 +1008,7 @@ def scorecard():
         hole_par = int(hole_dict["par"])
         if not hole_hcp:
             return apology("Missing hole hcp reference")
-        print("hole_par", hole_par)
+      
         
         team_players_keys = [
             (team_data["team_a_players"], "team_a"), 
@@ -1020,7 +1018,7 @@ def scorecard():
             for player in team_players:
                 score = scores_dict.get((player["id"], hole.hole_number))
                 strokes = 1 if player["hcp"] >= hole_hcp else 0
-                print('stroke', strokes)
+             
                 if score:
                     hole_dict[f"{team_key}_scores"].append(score.score)
                     new_net = score.score - strokes - hole_par
@@ -1348,7 +1346,7 @@ def get_match_data(match_id):
                         if player_CH > low_CH:
                             player["playing_hcp"] = min(player_CH - low_CH, max_strokes)
                         else:
-                            player["playing_hcp"] = min(player_CH, max_strokes)
+                            player["playing_hcp"] = 0
                     else:
                         player["playing_hcp"] = min(player_CH, max_strokes)
                 else:
@@ -1658,7 +1656,7 @@ def get_bet_results_data(match_id):
                             if player_CH > low_CH:
                                 player["playing_hcp"] = min(player_CH - low_CH, max_strokes)
                             else:
-                                player["playing_hcp"] = min(player_CH, max_strokes)
+                                player["playing_hcp"] = 0
                         else:
                             player["playing_hcp"] = min(player_CH, max_strokes)
                     else:
