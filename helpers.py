@@ -54,7 +54,7 @@ def event_selected(f):
     """ Decorate routes to require event in session."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if session.get("event_id") is None or session.get("hcp_allowance") is None:
+        if session.get("event_id") is None:
             return redirect("/")
         return f(*args, **kwargs)
     return decorated_function
@@ -79,14 +79,9 @@ def format_none(number):
     else:
         return number
 
-def playing_hcp(index, slope, rating, par):
+def playing_hcp(index, slope, rating, par, hcp_allowance):
     """Calculate playing handicap for a player."""
-    print(index, slope, rating, par)
-    print(session.get("hcp_allowance"))
 
-    hcp_allowance = float(session.get("hcp_allowance"))
- 
-    
     course_hcp = index * float(slope) / 113 + (rating - par)
     return int(min(__builtins__["round"](course_hcp * hcp_allowance, 0), 18))
 
@@ -141,6 +136,7 @@ def calculate_event_scores(event_id):
     event_name = event.event_name
     event_status = event.status
     play_off_min = event.play_off_min
+    hcp_allowance = float(event.hcp_allowance)
 
     # Get all rounds for the event
     rounds = (Round.query
@@ -201,11 +197,11 @@ def calculate_event_scores(event_id):
                 player_index = next((hcp.player_hcp for hcp in hcp_indexes if hcp.player_id == player["player_id"]), None)
                 if player_index:
                     if play_off_min:
-                        low_CH = playing_hcp(min_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par)
-                        player_CH = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par)
+                        low_CH = playing_hcp(min_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance)
+                        player_CH = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance)
                         player["playing_hcp"] = player_CH - low_CH if player_CH > low_CH else player_CH
                     else:
-                        player["playing_hcp"] = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par)
+                        player["playing_hcp"] = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance)
                 else:
                     player["playing_hcp"] = None
             

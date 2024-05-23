@@ -73,21 +73,16 @@ def index():
         event = Event.query.filter_by(id=event_id).first()
         if not event:
             return apology("Event not found")
-        
-        try:
-            hcp_allowance = float(event.hcp_allowance)
-        except ValueError:
-            return apology("Invalid handicap allowance")
+       
 
         session["event_id"] = event_id
-        session["hcp_allowance"] = hcp_allowance
-
+        print("made it here")
         return redirect("/event_scoreboard")
     else:
         # Remove any specific event in session
         if session.get("event_id") is not None:
             session.pop("event_id", None)
-            session.pop("hcp_allowance", None)
+           
        
 
         # Get groupname via session group_id
@@ -914,6 +909,7 @@ def scorecard():
     if not event:
         return apology("Event not found")
     event_name = event.event_name
+    hcp_allowance = float(event.hcp_allowance)
     play_off_min = event.play_off_min
     
     course = CourseTee.query.get(match.course_id)
@@ -952,7 +948,7 @@ def scorecard():
                     .all())
     
     min_index = min([hcp.player_hcp for hcp in hcp_indexes_all])
-    low_CH = playing_hcp(min_index, course.slope, course.rating, course.total_18_par)
+    low_CH = playing_hcp(min_index, course.slope, course.rating, course.total_18_par, hcp_allowance)
     
     
     # Add handicap for each player on team a and team b
@@ -965,7 +961,7 @@ def scorecard():
         if not hcp_index:
             return apology("Missing handicap index")
         
-        player_CH = playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par)
+        player_CH = playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par, hcp_allowance)
         if play_off_min:
             if player_CH > low_CH:
                 player["hcp"] = player_CH - low_CH
@@ -1272,13 +1268,14 @@ def get_match_data(match_id):
             )
 
     event = Event.query.get(session["event_id"])
+    hcp_allowance = float(event.hcp_allowance)
     play_off_min = event.play_off_min
      # Get all the handicaps for players in the event
     hcp_indexes = (Handicap.query
                     .filter_by(event_id=event.id)
                     .all())
     min_index = min([hcp.player_hcp for hcp in hcp_indexes])
-    low_CH = playing_hcp(min_index, match.course_tee.slope, match.course_tee.rating, match.course_tee.total_18_par)
+    low_CH = playing_hcp(min_index, match.course_tee.slope, match.course_tee.rating, match.course_tee.total_18_par, hcp_allowance)
 
     scores = (Scores.query
                 .filter_by(match_id=match_id)
@@ -1328,7 +1325,7 @@ def get_match_data(match_id):
             for player in team["players"]:
                 player_index = player["handicap_index"]
                 if player_index:
-                    player_CH = playing_hcp(player_index, course.slope, course.rating, course.total_18_par)
+                    player_CH = playing_hcp(player_index, course.slope, course.rating, course.total_18_par, hcp_allowance)
                     if play_off_min:
                         if player_CH > low_CH:
                             player["playing_hcp"] = player_CH - low_CH
@@ -1580,13 +1577,14 @@ def get_bet_results_data(match_id):
             )
     
     event = Event.query.get(session["event_id"])
+    hcp_allowance = float(event.hcp_allowance)
     play_off_min = event.play_off_min
      # Get all the handicaps for players in the event
     hcp_indexes = (Handicap.query
                     .filter_by(event_id=event.id)
                     .all())
     min_index = min([hcp.player_hcp for hcp in hcp_indexes])
-    low_CH = playing_hcp(min_index, match.course_tee.slope, match.course_tee.rating, match.course_tee.total_18_par)
+    low_CH = playing_hcp(min_index, match.course_tee.slope, match.course_tee.rating, match.course_tee.total_18_par, hcp_allowance)
 
     scores = (Scores.query
                 .filter_by(match_id=match_id)
@@ -1636,7 +1634,7 @@ def get_bet_results_data(match_id):
                 for player in team["players"]:
                     player_index = player["handicap_index"]
                     if player_index:
-                        player_CH = playing_hcp(player_index, course.slope, course.rating, course.total_18_par)
+                        player_CH = playing_hcp(player_index, course.slope, course.rating, course.total_18_par, hcp_allowance)
                         if play_off_min:
                             if player_CH > low_CH:
                                 player["playing_hcp"] = player_CH - low_CH
@@ -1936,6 +1934,7 @@ def course_handicaps():
     event = Event.query.get(session["event_id"])
     if not event:
         return apology("Event not found")
+    hcp_allowance = float(event.hcp_allowance)
     # Use joined load to get all matches in one query
     rounds = (Round.query
                 .options(joinedload(Round.matches))
@@ -1986,7 +1985,7 @@ def course_handicaps():
                 players_data[player.id] = {
                     "player_name": player.player_name,
                     "player_hcp": hcp_index,
-                    "course_hcp": playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par),
+                    "course_hcp": playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par, hcp_allowance),
                 }
 
             handicap_for_course = {
@@ -1999,7 +1998,8 @@ def course_handicaps():
         return render_template("course_handicaps.html", 
                             handicap_data=handicap_data,
                             players=players, 
-                            event_name=event.event_name
+                            event_name=event.event_name,
+                            hcp_allowance=hcp_allowance
                             )
     else:
         players_data = {}
@@ -2026,7 +2026,8 @@ def course_handicaps():
         return render_template("course_handicaps.html", 
                             handicap_data=handicap_data,
                             players=players, 
-                            event_name=event.event_name
+                            event_name=event.event_name,
+                            hcp_allowance=hcp_allowance
                             )
 
 @app.route('/api/course_hcp', methods=['POST'])
@@ -2040,12 +2041,14 @@ def course_hcp():
     player_name = data["player_name"]
     player_hcp = float(data["player_hcp"])
     course_id = data["course_id"]
+    hcp_allowance = float(data["hcp_allowance"])
+    
 
     course = CourseTee.query.get(course_id)
     
     
     # Calculate course handicap
-    course_handicap = playing_hcp(player_hcp, course.slope, course.rating, course.total_18_par)
+    course_handicap = playing_hcp(player_hcp, course.slope, course.rating, course.total_18_par, hcp_allowance)
 
     # Return a response
     return jsonify(course_hcp=course_handicap)

@@ -9,6 +9,7 @@
     <p><i>Adjusted for handicap allowance % and play off low (if selected)</i></p>
     <div class="mb-3">
         <p><b>Event Name:</b> {{ event_name }}</p>
+        <input type="hidden" id="hcp_allowance" value="{{ hcp_allowance }}">
     </div>
 
     <table class="table table-hover table-striped">
@@ -90,7 +91,8 @@
                     let player_name = document.getElementById('player_name_' + i).value;
                     let player_hcp = document.getElementById('hcp_' + i).value;
                     let player_hcp_other_course = document.getElementById('player_hcp_other_course_' + i);
-                    console.log(player_id, player_name, player_hcp, course_id);
+                    let hcp_allowance = document.getElementById('hcp_allowance').value;
+                    
                     fetch('/api/course_hcp', {
                         method: 'POST',
                         headers: {
@@ -100,7 +102,8 @@
                             player_id: player_id,
                             player_name: player_name,
                             player_hcp: player_hcp,
-                            course_id: course_id
+                            course_id: course_id,
+                            hcp_allowance: hcp_allowance
                         })
                     })
                     .then(response => response.json())
