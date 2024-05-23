@@ -87,11 +87,9 @@ def playing_hcp(index, slope, rating, par, hcp_allowance):
     par = float(par)
     course_hcp = index * slope / 113.0 + (rating - par)
     PH_unrounded = course_hcp * hcp_allowance
-    print(index, slope, rating, par, hcp_allowance)
-    print(course_hcp)
-    print(PH_unrounded)
-    playing_handicap = int(min(__builtins__["round"](PH_unrounded, 0), 18))
-   
+
+    playing_handicap = int(__builtins__["round"](PH_unrounded, 0))
+    
     return playing_handicap
 
 def check_bet_availability(holes_data, hole_number, bet_type):
@@ -146,6 +144,7 @@ def calculate_event_scores(event_id):
     event_status = event.status
     play_off_min = event.play_off_min
     hcp_allowance = float(event.hcp_allowance)
+    max_strokes = event.max_strokes
 
     # Get all rounds for the event
     rounds = (Round.query
@@ -208,9 +207,9 @@ def calculate_event_scores(event_id):
                     if play_off_min:
                         low_CH = playing_hcp(min_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance)
                         player_CH = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance)
-                        player["playing_hcp"] = player_CH - low_CH if player_CH > low_CH else player_CH
+                        player["playing_hcp"] = min(player_CH - low_CH if player_CH > low_CH else player_CH, max_strokes)
                     else:
-                        player["playing_hcp"] = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance)
+                        player["playing_hcp"] = min(playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance), max_strokes)
                 else:
                     player["playing_hcp"] = None
             

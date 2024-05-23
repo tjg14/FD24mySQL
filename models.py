@@ -41,6 +41,7 @@ class Event(db.Model):
     status = db.Column(db.String(15), nullable=False, server_default='INCOMPLETE')
     play_off_min = db.Column(db.Boolean, nullable=False, server_default='0')
     hcp_allowance = db.Column(db.Float, nullable=False, server_default='0.85')
+    max_strokes = db.Column(db.Integer, nullable=False, server_default='50')
 
 class Team(db.Model):
     __tablename__ = 'teams'

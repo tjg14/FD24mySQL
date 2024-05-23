@@ -547,6 +547,17 @@ def create_event_continued():
     except ValueError:
         return apology("Handicap allowance must be a float.")
 
+    max_strokes = request.form.get("max_strokes")
+    if max_strokes:
+        try:
+            max_strokes = int(max_strokes)
+        except ValueError:
+            return apology("Max strokes must be an integer.")
+    else:
+        max_strokes = 50
+        
+    
+
 
     # Get team details and error check
     teams = []
@@ -582,7 +593,8 @@ def create_event_continued():
                   group_id=session["group_id"], 
                   date=event_date,
                   play_off_min=play_off_min,
-                  hcp_allowance=hcp_allowance)
+                  hcp_allowance=hcp_allowance,
+                  max_strokes=max_strokes)
     db.session.add(new_event)
     db.session.commit()
 
@@ -909,6 +921,7 @@ def scorecard():
     if not event:
         return apology("Event not found")
     event_name = event.event_name
+    max_strokes = event.max_strokes
     hcp_allowance = float(event.hcp_allowance)
     play_off_min = event.play_off_min
     
@@ -964,11 +977,11 @@ def scorecard():
         player_CH = playing_hcp(hcp_index, course.slope, course.rating, course.total_18_par, hcp_allowance)
         if play_off_min:
             if player_CH > low_CH:
-                player["hcp"] = player_CH - low_CH
+                player["hcp"] = min(player_CH - low_CH, max_strokes)
             else:
-                player["hcp"] = player_CH
+                player["hcp"] = min(player_CH, max_strokes)
         else:
-            player["hcp"] = player_CH
+            player["hcp"] = min(player_CH, max_strokes)
         player["front_9_total"] = 0
         player["back_9_total"] = 0
         player["total_18"] = 0
@@ -1269,6 +1282,7 @@ def get_match_data(match_id):
 
     event = Event.query.get(session["event_id"])
     hcp_allowance = float(event.hcp_allowance)
+    max_strokes = event.max_strokes
     play_off_min = event.play_off_min
      # Get all the handicaps for players in the event
     hcp_indexes = (Handicap.query
@@ -1328,11 +1342,11 @@ def get_match_data(match_id):
                     player_CH = playing_hcp(player_index, course.slope, course.rating, course.total_18_par, hcp_allowance)
                     if play_off_min:
                         if player_CH > low_CH:
-                            player["playing_hcp"] = player_CH - low_CH
+                            player["playing_hcp"] = min(player_CH - low_CH, max_strokes)
                         else:
-                            player["playing_hcp"] = player_CH
+                            player["playing_hcp"] = min(player_CH, max_strokes)
                     else:
-                        player["playing_hcp"] = player_CH
+                        player["playing_hcp"] = min(player_CH, max_strokes)
                 else:
                     player["playing_hcp"] = None
 
@@ -1578,6 +1592,7 @@ def get_bet_results_data(match_id):
     
     event = Event.query.get(session["event_id"])
     hcp_allowance = float(event.hcp_allowance)
+    max_strokes = event.max_strokes
     play_off_min = event.play_off_min
      # Get all the handicaps for players in the event
     hcp_indexes = (Handicap.query
@@ -1637,11 +1652,11 @@ def get_bet_results_data(match_id):
                         player_CH = playing_hcp(player_index, course.slope, course.rating, course.total_18_par, hcp_allowance)
                         if play_off_min:
                             if player_CH > low_CH:
-                                player["playing_hcp"] = player_CH - low_CH
+                                player["playing_hcp"] = min(player_CH - low_CH, max_strokes)
                             else:
-                                player["playing_hcp"] = player_CH
+                                player["playing_hcp"] = min(player_CH, max_strokes)
                         else:
-                            player["playing_hcp"] = player_CH
+                            player["playing_hcp"] = min(player_CH, max_strokes)
                     else:
                         player["playing_hcp"] = None
     
