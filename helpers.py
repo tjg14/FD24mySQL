@@ -86,7 +86,11 @@ def playing_hcp(index, slope, rating, par, hcp_allowance):
     rating = float(rating)
     par = float(par)
     course_hcp = index * slope / 113.0 + (rating - par)
-    playing_handicap = int(min(__builtins__["round"](course_hcp * hcp_allowance, 0), 18))
+    PH_unrounded = course_hcp * hcp_allowance
+    print(index, slope, rating, par, hcp_allowance)
+    print(course_hcp)
+    print(PH_unrounded)
+    playing_handicap = int(min(__builtins__["round"](PH_unrounded, 0), 18))
    
     return playing_handicap
 
