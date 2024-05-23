@@ -28,6 +28,7 @@
                             <td>
                                 <form action="/" method="post">
                                     <input type="hidden" name="event_name" value="{{ event.event_name }}">
+                                    <input type="hidden" name="event_id" value="{{ event.event_id }}">
                                     <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">{{ event.event_name }}</button>
                                 </form>
                             </td>
@@ -62,6 +63,7 @@
                         <td>
                             <form action="/" method="post">
                                 <input type="hidden" name="event_name" value="{{ event.event_name }}">
+                                <input type="hidden" name="event_id" value="{{ event.event_id }}">
                                 <button type="submit" class="btn btn-link" style="color: green; text-decoration: underline;">{{ event.event_name }}</button>
                             </form>
                         </td>

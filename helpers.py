@@ -81,8 +81,10 @@ def format_none(number):
 
 def playing_hcp(index, slope, rating, par):
     """Calculate playing handicap for a player."""
+    hcp_allowance = float(session.get("hcp_allowance"))
+    
     course_hcp = index * float(slope) / 113 + (rating - par)
-    return int(min(__builtins__["round"](course_hcp * 0.85, 0), 18))
+    return int(min(__builtins__["round"](course_hcp * hcp_allowance, 0), 18))
 
 def check_bet_availability(holes_data, hole_number, bet_type):
     """Check if a bet is available for a hole."""

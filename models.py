@@ -1,4 +1,5 @@
 from app import db
+from sqlalchemy import UniqueConstraint
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -39,6 +40,7 @@ class Event(db.Model):
     date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(15), nullable=False, server_default='INCOMPLETE')
     play_off_min = db.Column(db.Boolean, nullable=False, server_default='0')
+    hcp_allowance = db.Column(db.Float, nullable=False, server_default='0.85')
 
 class Team(db.Model):
     __tablename__ = 'teams'
@@ -97,6 +99,8 @@ class Round(db.Model):
 
     matches = db.relationship('Match', backref='round')
 
+    __table_args__ = (UniqueConstraint('event_id', 'round_number', name='uix_event_id_round_number'),)
+
 class Match(db.Model):
     __tablename__ = 'matches'
 
@@ -114,6 +118,8 @@ class Match(db.Model):
     team_a = db.relationship('Team', foreign_keys=[team_a_id])
     team_b = db.relationship('Team', foreign_keys=[team_b_id])
     course_tee = db.relationship('CourseTee')
+
+    __table_args__ = (UniqueConstraint('round_id', 'match_number', name='uix_round_id_match_number'),)
 
 class Scores(db.Model):
     __tablename__ = 'scores'

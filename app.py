@@ -60,21 +60,29 @@ def index():
     """Show homepage"""
     
     if request.method == "POST":
-        # Get event_name, add event id to sessions, and redirect to event page
-        event_name = request.form.get("event_name")
+        # Get event_id, add event id to sessions, and redirect to event page
+        
+        event_id = request.form.get("event_id")
+        if not event_id:
+            return apology("No event selected")
         try:
-            event_id = Event.query.filter_by(event_name=event_name, group_id=session["group_id"]).first().id
-        except AttributeError:
-            return apology("event not found")
-
+            event_id = int(event_id)
+        except ValueError:
+            return apology("Invalid event id")
+        # Confirm event exists in database
+        event = Event.query.filter_by(id=event_id).first()
+        if not event:
+            return apology("Event not found")
         
         session["event_id"] = event_id
+        session["hcp_allowance"] = event.hcp_allowance
 
         return redirect("/event_scoreboard")
     else:
         # Remove any specific event in session
         if session.get("event_id") is not None:
             session.pop("event_id", None)
+            session.pop("hcp_allowance", None)
        
 
         # Get groupname via session group_id
@@ -529,6 +537,17 @@ def create_event_continued():
     if num_teams < 2:
         return apology("At least 2 teams must be provided.")
     
+    hcp_allowance = request.form.get("hcp_allowance")
+    if not hcp_allowance:
+        return apology("Handicap allowance must be provided.")
+    try:
+        hcp_allowance = float(hcp_allowance)
+        if hcp_allowance < 0 or hcp_allowance > 1:
+            return apology("Handicap allowance must be between 0 and 1.")
+    except ValueError:
+        return apology("Handicap allowance must be a float.")
+
+
     # Get team details and error check
     teams = []
     for i in range(num_teams):
@@ -562,7 +581,8 @@ def create_event_continued():
     new_event = Event(event_name=event_name, 
                   group_id=session["group_id"], 
                   date=event_date,
-                  play_off_min=play_off_min)
+                  play_off_min=play_off_min,
+                  hcp_allowance=hcp_allowance)
     db.session.add(new_event)
     db.session.commit()
 
@@ -1905,6 +1925,7 @@ def event_settings():
 @group_login_required
 @event_selected
 def course_handicaps():
+
     
     # Using session event id to get all rouunds, and round ids to get all matches, and matches to get all course ids, get all courses
     event = Event.query.get(session["event_id"])
@@ -1941,7 +1962,7 @@ def course_handicaps():
                 .options(joinedload(Player.handicaps))
                 .filter(Player.id.in_(player_ids))
                 .all())
-
+    
     handicap_data = []
     if rounds:
         for course in courses:
@@ -1955,6 +1976,7 @@ def course_handicaps():
                     ), 
                     None
                 )
+                
 
                 players_data[player.id] = {
                     "player_name": player.player_name,
@@ -1968,7 +1990,7 @@ def course_handicaps():
             }
             handicap_data.append(handicap_for_course)
         
-        print(handicap_data)
+        
         return render_template("course_handicaps.html", 
                             handicap_data=handicap_data,
                             players=players, 
@@ -2015,6 +2037,7 @@ def course_hcp():
     course_id = data["course_id"]
 
     course = CourseTee.query.get(course_id)
+    
     
     # Calculate course handicap
     course_handicap = playing_hcp(player_hcp, course.slope, course.rating, course.total_18_par)

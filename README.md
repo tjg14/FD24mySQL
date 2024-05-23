@@ -65,6 +65,7 @@ CREATE TABLE events (
     date DATE NOT NULL,
     status VARCHAR(15) NOT NULL DEFAULT 'INCOMPLETE',
     play_off_min BOOLEAN NOT NULL DEFAULT 0,
+    hcp_allowance DECIMAL(3, 2) NOT NULL DEFAULT 0.85,
     FOREIGN KEY (group_id) REFERENCES golf_groups(id)
 );
 
