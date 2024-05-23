@@ -207,7 +207,7 @@ def calculate_event_scores(event_id):
                     if play_off_min:
                         low_CH = playing_hcp(min_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance)
                         player_CH = playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance)
-                        player["playing_hcp"] = min(player_CH - low_CH if player_CH > low_CH else player_CH, max_strokes)
+                        player["playing_hcp"] = min(player_CH - low_CH if player_CH > low_CH else 0, max_strokes)
                     else:
                         player["playing_hcp"] = min(playing_hcp(player_index, course_for_match.slope, course_for_match.rating, course_for_match.total_18_par, hcp_allowance), max_strokes)
                 else:
