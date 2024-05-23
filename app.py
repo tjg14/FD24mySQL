@@ -1499,6 +1499,7 @@ def process_bets():
     bets_dict = {bet.match_hole_number: bet for bet in bets}
     
     # For holes 1-18, check if bets exist in database, if not, add them
+    # if the bet is 1 in database, but current bet is 0, update the bet to 0
     for i in range(1, 19):
         if (i < 10):    
             if match_data[i]["F9"]["current_bets"] == 1:
@@ -1508,6 +1509,9 @@ def process_bets():
                     bets_dict[i] = new_bet
                 elif not bets_dict[i].front_9_bets:
                     bets_dict[i].front_9_bets = 1
+            else:
+                if i in bets_dict and bets_dict[i].front_9_bets:
+                    bets_dict[i].front_9_bets = 0
         if (i > 10):
             if match_data[i]["B9"]["current_bets"] == 1:
                 if i not in bets_dict:
@@ -1516,12 +1520,18 @@ def process_bets():
                     bets_dict[i] = new_bet
                 elif not bets_dict[i].back_9_bets:
                     bets_dict[i].back_9_bets = 1
+            else:
+                if i in bets_dict and bets_dict[i].back_9_bets:
+                    bets_dict[i].back_9_bets = 0
         if match_data[i]["18"]["current_bets"] == 1:
             if i not in bets_dict:
                 new_bet = Bets(match_id=match_id, match_hole_number=i, total_18_bets=1)
                 db.session.add(new_bet)
             elif not bets_dict[i].total_18_bets:
                 bets_dict[i].total_18_bets = 1
+        else:
+            if i in bets_dict and bets_dict[i].total_18_bets:
+                bets_dict[i].total_18_bets = 0
     db.session.commit()
     
     return jsonify({"error": False, "message": "Bets data saved"})

@@ -261,7 +261,7 @@
             betsCheckbox.addEventListener('change', () => {
                 // Update the current bet value for this hole
                 match_api_data[holeNumber][type]["current_bets"] = betsCheckbox.checked ? 1 : 0;
-
+                console.log(match_api_data);
                 // Recalculate the available bets for each hole
                 recalculateAvailableBets();
             });
