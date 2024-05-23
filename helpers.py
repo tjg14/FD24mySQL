@@ -54,7 +54,7 @@ def event_selected(f):
     """ Decorate routes to require event in session."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if session.get("event_id") is None:
+        if session.get("event_id") is None or session.get("hcp_allowance") is None:
             return redirect("/")
         return f(*args, **kwargs)
     return decorated_function
@@ -81,7 +81,11 @@ def format_none(number):
 
 def playing_hcp(index, slope, rating, par):
     """Calculate playing handicap for a player."""
+    print(index, slope, rating, par)
+    print(session.get("hcp_allowance"))
+
     hcp_allowance = float(session.get("hcp_allowance"))
+ 
     
     course_hcp = index * float(slope) / 113 + (rating - par)
     return int(min(__builtins__["round"](course_hcp * hcp_allowance, 0), 18))

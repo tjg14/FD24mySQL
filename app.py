@@ -74,8 +74,13 @@ def index():
         if not event:
             return apology("Event not found")
         
+        try:
+            hcp_allowance = float(event.hcp_allowance)
+        except ValueError:
+            return apology("Invalid handicap allowance")
+
         session["event_id"] = event_id
-        session["hcp_allowance"] = event.hcp_allowance
+        session["hcp_allowance"] = hcp_allowance
 
         return redirect("/event_scoreboard")
     else:
